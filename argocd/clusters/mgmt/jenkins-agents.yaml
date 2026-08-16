@@ -10,7 +10,7 @@ metadata:
 spec:
   project: platform
   source:
-    repoURL: 'https://github.com/taptech/taptech-gitops.git'
+    repoURL: 'https://github.com/glawson6/taptech-gitops.git'
     targetRevision: main
     path: platform/jenkins-agents
   destination:

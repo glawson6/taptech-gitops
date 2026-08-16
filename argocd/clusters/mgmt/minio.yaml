@@ -25,10 +25,10 @@ spec:
           # order, so the cluster file wins on any key it sets.
           - $values/platform/minio/values.yaml
           - $values/platform/minio/clusters/mgmt.yaml
-    - repoURL: 'https://github.com/taptech/taptech-gitops.git'
+    - repoURL: 'https://github.com/glawson6/taptech-gitops.git'
       targetRevision: main
       ref: values
-    - repoURL: 'https://github.com/taptech/taptech-gitops.git'
+    - repoURL: 'https://github.com/glawson6/taptech-gitops.git'
       targetRevision: main
       path: platform/minio/manifests/mgmt
   syncPolicy:

@@ -23,10 +23,10 @@ spec:
           # order, so the cluster file wins on any key it sets.
           - $values/platform/reloader/values.yaml
           - $values/platform/reloader/clusters/apps-prod.yaml
-    - repoURL: 'https://github.com/taptech/taptech-gitops.git'
+    - repoURL: 'https://github.com/glawson6/taptech-gitops.git'
       targetRevision: main
       ref: values
-    - repoURL: 'https://github.com/taptech/taptech-gitops.git'
+    - repoURL: 'https://github.com/glawson6/taptech-gitops.git'
       targetRevision: main
       path: platform/reloader/manifests/apps-prod
   syncPolicy:

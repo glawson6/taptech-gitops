@@ -23,10 +23,10 @@ spec:
           # order, so the cluster file wins on any key it sets.
           - $values/platform/external-dns/values.yaml
           - $values/platform/external-dns/clusters/mgmt.yaml
-    - repoURL: 'https://github.com/taptech/taptech-gitops.git'
+    - repoURL: 'https://github.com/glawson6/taptech-gitops.git'
       targetRevision: main
       ref: values
-    - repoURL: 'https://github.com/taptech/taptech-gitops.git'
+    - repoURL: 'https://github.com/glawson6/taptech-gitops.git'
       targetRevision: main
       path: platform/external-dns/manifests/mgmt
   syncPolicy:

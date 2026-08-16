@@ -29,7 +29,7 @@ spec:
         releaseName: argocd
         valueFiles:
           - $values/platform/argocd/values.yaml
-    - repoURL: 'https://github.com/taptech/taptech-gitops.git'
+    - repoURL: 'https://github.com/glawson6/taptech-gitops.git'
       targetRevision: main
       ref: values
   syncPolicy:

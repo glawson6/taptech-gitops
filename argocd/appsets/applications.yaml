@@ -30,7 +30,7 @@ spec:
                 #   namespace: taptech-staging
                 #   autoSync: "true"
           - git:
-              repoURL: 'https://github.com/taptech/taptech-gitops.git'
+              repoURL: 'https://github.com/glawson6/taptech-gitops.git'
               revision: main
               directories:
                 - path: 'applications/*/overlays/{{.env}}'
@@ -46,7 +46,7 @@ spec:
     spec:
       project: applications
       source:
-        repoURL: 'https://github.com/taptech/taptech-gitops.git'
+        repoURL: 'https://github.com/glawson6/taptech-gitops.git'
         targetRevision: main
         path: '{{.path.path}}'
       destination:
