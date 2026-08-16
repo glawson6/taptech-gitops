@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: customer-service
+  labels:
+    app.kubernetes.io/name: customer-service
+    app.kubernetes.io/part-of: taptech
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [customer-service.taptech.net]
+      secretName: customer-service-tls
+  rules:
+    - host: customer-service.taptech.net
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: customer-service
+                port:
+                  name: http

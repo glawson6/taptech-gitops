@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: applications
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: TapTech business services. Application clusters only, namespaced resources only.
+  sourceRepos:
+    - 'https://github.com/taptech/taptech-gitops.git'
+  destinations:
+    # Named clusters, not URLs. The management cluster is deliberately absent:
+    # a business service must never be schedulable onto the control plane.
+    - name: apps-prod
+      namespace: 'taptech-*'
+    # - name: apps-k3s
+    #   namespace: 'taptech-*'
+  clusterResourceWhitelist: []
+  namespaceResourceBlacklist:
+    - group: ''
+      kind: ResourceQuota
+    - group: ''
+      kind: LimitRange

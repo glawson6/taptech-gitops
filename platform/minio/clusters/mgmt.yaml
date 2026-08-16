@@ -1,0 +1,15 @@
+# Mgmt-cluster overrides. Ingress stays off until cert-manager is healthy on
+# this cluster -- flip `ingress.enabled` to true once you have a ClusterIssuer
+# and DNS pointing at the ingress controller.
+ingress:
+  enabled: false
+  ingressClassName: nginx
+  hosts:
+    - minio.taptech.net
+  tls: []
+consoleIngress:
+  enabled: false
+  ingressClassName: nginx
+  hosts:
+    - minio-console.taptech.net
+  tls: []

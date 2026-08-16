@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mgmt-minio
+  namespace: argocd
+  annotations:
+    # After ingress (-3) and cert-manager (-5); before Jenkins (2) so JCasC
+    # can reference the minio-jenkins Secret and hit svc/minio at boot.
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: platform
+  destination:
+    name: in-cluster
+    namespace: minio
+  sources:
+    - repoURL: 'https://charts.min.io'
+      chart: minio
+      targetRevision: 5.4.0   # VERIFY: helm search repo <repo>/minio --versions
+      helm:
+        releaseName: minio
+        valueFiles:
+          # Shared defaults first, per-cluster overrides second. Helm merges in
+          # order, so the cluster file wins on any key it sets.
+          - $values/platform/minio/values.yaml
+          - $values/platform/minio/clusters/mgmt.yaml
+    - repoURL: 'https://github.com/taptech/taptech-gitops.git'
+      targetRevision: main
+      ref: values
+    - repoURL: 'https://github.com/taptech/taptech-gitops.git'
+      targetRevision: main
+      path: platform/minio/manifests/mgmt
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]

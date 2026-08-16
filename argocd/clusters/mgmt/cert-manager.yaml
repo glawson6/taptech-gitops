@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mgmt-cert-manager
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: platform
+  destination:
+    name: in-cluster
+    namespace: cert-manager
+  sources:
+    - repoURL: 'https://charts.jetstack.io'
+      chart: cert-manager
+      targetRevision: v1.16.2   # VERIFY: helm search repo <repo>/cert-manager --versions
+      helm:
+        releaseName: cert-manager
+        valueFiles:
+          # Shared defaults first, per-cluster overrides second. Helm merges in
+          # order, so the cluster file wins on any key it sets.
+          - $values/platform/cert-manager/values.yaml
+          - $values/platform/cert-manager/clusters/mgmt.yaml
+    - repoURL: 'https://github.com/taptech/taptech-gitops.git'
+      targetRevision: main
+      ref: values
+    - repoURL: 'https://github.com/taptech/taptech-gitops.git'
+      targetRevision: main
+      path: platform/cert-manager/manifests/mgmt
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]

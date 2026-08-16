@@ -1,0 +1,8 @@
+# txtOwnerId MUST be unique per cluster.
+#
+# external-dns records ownership of each DNS record in a TXT record keyed by
+# this ID. Two instances sharing an ID against the same zone will each read the
+# other's records as orphaned and delete them -- records flap on a loop and it
+# is thoroughly unpleasant to debug against live DNS.
+txtOwnerId: taptech-mgmt
+txtPrefix: _edns-mgmt.

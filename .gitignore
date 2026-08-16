@@ -1,0 +1,13 @@
+# local scratch
+*.local.yaml
+*.tmp
+.DS_Store
+# rendered output — never commit build artifacts
+/rendered/
+# secrets must never be committed in plaintext
+*.dec.yaml
+secret-*.yaml
+!*sealed*.yaml
+
+# staged for removal - delete this folder
+_to_delete/

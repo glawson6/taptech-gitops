@@ -1,0 +1,15 @@
+# Management cluster: MicroK8s. `microk8s enable hostpath-storage` must have
+# been run on the node (scripts/prep-microk8s.sh does that). The class NAME
+# is the contract -- Jenkins, MinIO, Prometheus and Grafana all request
+# `taptech-standard`, so swap the provisioner per cluster and keep the name.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: taptech-standard
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: microk8s.io/hostpath
+parameters:
+  pvDir: /var/snap/microk8s/common/default-storage
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer

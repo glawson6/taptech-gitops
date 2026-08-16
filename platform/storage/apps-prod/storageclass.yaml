@@ -1,0 +1,13 @@
+# MicroK8s. Enable the provisioner on the node first:
+#   microk8s enable hostpath-storage
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: taptech-standard
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: microk8s.io/hostpath
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+parameters:
+  pvDir: /var/snap/microk8s/common/default-storage

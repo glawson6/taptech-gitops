@@ -1,0 +1,3 @@
+# Unique per cluster -- see the note in clusters/mgmt.yaml.
+txtOwnerId: taptech-apps-prod
+txtPrefix: _edns-apps-prod.

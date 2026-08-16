@@ -1,0 +1,17 @@
+crds:
+  enabled: true
+  keep: true
+replicaCount: 1
+resources:
+  requests: {cpu: 10m, memory: 64Mi}
+  limits:   {memory: 128Mi}
+webhook:
+  resources:
+    requests: {cpu: 10m, memory: 32Mi}
+cainjector:
+  resources:
+    requests: {cpu: 10m, memory: 128Mi}
+prometheus:
+  enabled: true
+  servicemonitor:
+    enabled: false

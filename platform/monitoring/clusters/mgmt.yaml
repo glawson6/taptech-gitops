@@ -1,0 +1,28 @@
+# The single pane of glass. Grafana runs here only and queries both clusters'
+# Prometheus instances as separate datasources.
+grafana:
+  enabled: true
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  persistence:
+    enabled: true
+    storageClassName: taptech-standard
+    size: 5Gi
+  ingress:
+    enabled: false          # enable once ingress + cert-manager are healthy
+    ingressClassName: nginx
+    hosts: [grafana.taptech.net]
+  additionalDataSources:
+    - name: prometheus-apps-prod
+      type: prometheus
+      access: proxy
+      # TODO: reachable URL for the apps cluster Prometheus. Options, in order
+      # of preference: private network address, an authenticated ingress, or a
+      # tunnel. Do NOT expose Prometheus publicly without auth -- it will happily
+      # hand over every metric label in your estate.
+      url: https://prometheus.taptech.net
+      isDefault: false
+      jsonData:
+        timeInterval: 30s

@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mgmt-monitoring
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: platform
+  destination:
+    name: in-cluster
+    namespace: monitoring
+  sources:
+    - repoURL: 'https://prometheus-community.github.io/helm-charts'
+      chart: kube-prometheus-stack
+      targetRevision: 67.4.0   # VERIFY: helm search repo <repo>/kube-prometheus-stack --versions
+      helm:
+        releaseName: monitoring
+        valueFiles:
+          # Shared defaults first, per-cluster overrides second. Helm merges in
+          # order, so the cluster file wins on any key it sets.
+          - $values/platform/monitoring/values.yaml
+          - $values/platform/monitoring/clusters/mgmt.yaml
+    - repoURL: 'https://github.com/taptech/taptech-gitops.git'
+      targetRevision: main
+      ref: values
+    - repoURL: 'https://github.com/taptech/taptech-gitops.git'
+      targetRevision: main
+      path: platform/monitoring/manifests/mgmt
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]

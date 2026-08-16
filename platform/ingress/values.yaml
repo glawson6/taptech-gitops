@@ -1,0 +1,16 @@
+controller:
+  ingressClassResource:
+    name: nginx
+    default: true
+  config:
+    use-forwarded-headers: "true"
+    proxy-body-size: "32m"
+    enable-real-ip: "true"
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: false     # flip on after monitoring (wave 5)
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+defaultBackend:
+  enabled: false

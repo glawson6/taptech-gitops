@@ -1,0 +1,31 @@
+# Shared across clusters. Prometheus runs on BOTH: kubelet, node and cAdvisor
+# metrics can only be scraped locally, so a single central Prometheus reaching
+# across clusters is not a real option.
+fullnameOverride: kps
+crds:
+  enabled: true
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests: {cpu: 100m, memory: 1Gi}
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: taptech-standard
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests: {storage: 20Gi}
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    resources:
+      requests: {cpu: 10m, memory: 128Mi}
+# Not reachable the way kubeadm exposes them on MicroK8s/K3s.
+kubeControllerManager: {enabled: false}
+kubeScheduler: {enabled: false}
+kubeProxy: {enabled: false}
+kubeEtcd: {enabled: false}

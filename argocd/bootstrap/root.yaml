@@ -1,0 +1,26 @@
+# The single manifest applied by hand, against the MANAGEMENT cluster.
+#   kubectl apply -f argocd/bootstrap/root.yaml
+# Everything else -- including Argo CD's own Helm release -- flows from git.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/taptech/taptech-gitops.git'
+    targetRevision: main
+    path: argocd
+    directory:
+      recurse: true
+      exclude: 'bootstrap/*'
+  destination:
+    name: in-cluster
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

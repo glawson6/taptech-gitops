@@ -1,0 +1,10 @@
+reloader:
+  watchGlobally: true
+  autoReloadAll: false        # opt-in: workloads carry reloader.stakater.com/auto
+  reloadStrategy: annotations
+  deployment:
+    resources:
+      requests: {cpu: 10m, memory: 64Mi}
+      limits:   {memory: 128Mi}
+  podMonitor:
+    enabled: false

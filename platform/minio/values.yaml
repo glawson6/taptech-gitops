@@ -1,0 +1,42 @@
+# Shared across clusters. Community chart from https://charts.min.io.
+# Root credentials come from the `minio-root` secret produced by an
+# ExternalSecret -- never inline them here.
+mode: standalone
+replicas: 1
+
+persistence:
+  enabled: true
+  storageClass: taptech-standard
+  size: 50Gi
+
+existingSecret: minio-root
+
+# Buckets created on first boot. Jenkins uses jenkins-artifacts for build
+# outputs and jenkins-backups for JCasC / thinBackup dumps. Extend the list
+# rather than renaming -- MinIO will skip buckets that already exist.
+buckets:
+  - name: jenkins-artifacts
+    policy: none
+    purge: false
+  - name: jenkins-backups
+    policy: none
+    purge: false
+  - name: mgmt-general
+    policy: none
+    purge: false
+
+resources:
+  requests: {cpu: 100m, memory: 512Mi}
+  limits: {memory: 2Gi}
+
+# Console off by default -- turn it on per cluster if you want a UI. The S3
+# API stays on 9000 either way and is what Jenkins talks to.
+consoleService:
+  type: ClusterIP
+service:
+  type: ClusterIP
+
+metrics:
+  serviceMonitor:
+    enabled: true
+    namespace: monitoring

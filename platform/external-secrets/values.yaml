@@ -1,0 +1,21 @@
+# ESO runs on EVERY cluster. A Kubernetes Secret cannot cross a cluster
+# boundary, so each cluster resolves its own secrets from its own vault.
+crds:
+  create: true
+  conversion:
+    enabled: false
+installCRDs: true          # chart 0.x spelling; harmless on 2.x
+replicaCount: 1
+resources:
+  requests: {cpu: 10m, memory: 64Mi}
+  limits:   {memory: 256Mi}
+webhook:
+  replicaCount: 1
+  resources:
+    requests: {cpu: 10m, memory: 32Mi}
+certController:
+  replicaCount: 1
+  resources:
+    requests: {cpu: 10m, memory: 32Mi}
+serviceMonitor:
+  enabled: false           # flip on after kube-prometheus-stack (wave 5) is up

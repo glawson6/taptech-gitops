@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: taptech-prod
+resources:
+  - ../../base
+  - ingress.yaml
+
+labels:
+  - includeSelectors: false
+    pairs:
+      taptech.net/env: prod
+
+replicas:
+  - name: authentication
+    count: 2
+
+patches:
+  - path: patch-env.yaml
+  - path: patch-resources.yaml
+
+# ---- Jenkins writes this line ----
+#   kustomize edit set image registry.taptech.net/taptech/authentication=registry.taptech.net/taptech/authentication:<tag>
+# Keep it immutable (git sha or build number), never 'latest'.
+images:
+  - name: registry.taptech.net/taptech/authentication
+    newTag: "0.0.0-bootstrap"

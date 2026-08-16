@@ -1,0 +1,28 @@
+# A runaway pipeline should not be able to starve the cluster.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: jenkins-agents
+  namespace: jenkins-agents
+spec:
+  hard:
+    pods: "12"
+    requests.cpu: "6"
+    requests.memory: 12Gi
+    limits.cpu: "12"
+    limits.memory: 24Gi
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: jenkins-agents-defaults
+  namespace: jenkins-agents
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: "1"
+        memory: 2Gi
+      defaultRequest:
+        cpu: 200m
+        memory: 512Mi

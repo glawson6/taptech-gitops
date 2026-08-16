@@ -1,0 +1,47 @@
+# Jenkins runs in the 'jenkins' namespace and schedules build pods here.
+#
+# The controller uses its own pod ServiceAccount -- no token secret, no
+# kubeconfig, nothing to rotate. This Role is the entire permission set it has
+# outside its own namespace: create and watch pods, and nothing else.
+#
+# Note what is absent: no access to Deployments, no access to the taptech-*
+# namespaces, and no access to the apps-prod cluster at all. Jenkins deploys by
+# committing to git; Argo CD is the only thing that talks to a cluster.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: jenkins-agent-scheduler
+  namespace: jenkins-agents
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets", "configmaps"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["create", "delete", "get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jenkins-agent-scheduler
+  namespace: jenkins-agents
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: jenkins-agent-scheduler
+subjects:
+  - kind: ServiceAccount
+    name: jenkins            # created by the Jenkins chart
+    namespace: jenkins

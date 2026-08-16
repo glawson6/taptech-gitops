@@ -1,0 +1,57 @@
+controller:
+  # Admin credentials come from 1Password, never from this file.
+  admin:
+    existingSecret: jenkins-admin
+    userKey: username
+    passwordKey: password
+  resources:
+    requests: {cpu: 200m, memory: 1Gi}
+    limits:   {memory: 3Gi}
+  installPlugins:
+    - kubernetes:latest
+    - workflow-aggregator:latest
+    - git:latest
+    - configuration-as-code:latest
+    - credentials-binding:latest
+    - job-dsl:latest
+  installLatestPlugins: true
+  ingress:
+    enabled: false          # enable once ingress + cert-manager are healthy
+    ingressClassName: nginx
+    hostName: jenkins.taptech.net
+  JCasC:
+    defaultConfig: true
+    configScripts:
+      agents: |
+        jenkins:
+          clouds:
+            - kubernetes:
+                name: "in-cluster"
+                # Jenkins now runs INSIDE the cluster it schedules agents on, so
+                # there is no API URL, no CA bundle and no service-account token
+                # to paste anywhere. It uses its own pod identity.
+                serverUrl: ""
+                namespace: "jenkins-agents"
+                jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080"
+                jenkinsTunnel: "jenkins-agent.jenkins.svc.cluster.local:50000"
+                containerCapStr: "10"
+                podRetention: "never"
+  serviceAccount:
+    create: true
+    name: jenkins
+persistence:
+  enabled: true
+  storageClass: taptech-standard
+  size: 20Gi
+agent:
+  enabled: true
+  namespace: jenkins-agents
+  podName: agent
+  resources:
+    requests: {cpu: 200m, memory: 512Mi}
+    limits:   {cpu: "2", memory: 4Gi}
+rbac:
+  create: true
+serviceAccountAgent:
+  create: true
+  name: jenkins-agent

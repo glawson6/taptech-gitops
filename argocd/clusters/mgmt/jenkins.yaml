@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mgmt-jenkins
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: platform
+  destination:
+    name: in-cluster
+    namespace: jenkins
+  sources:
+    - repoURL: 'https://charts.jenkins.io'
+      chart: jenkins
+      targetRevision: 5.8.16   # VERIFY: helm search repo <repo>/jenkins --versions
+      helm:
+        releaseName: jenkins
+        valueFiles:
+          # Shared defaults first, per-cluster overrides second. Helm merges in
+          # order, so the cluster file wins on any key it sets.
+          - $values/platform/jenkins/values.yaml
+          - $values/platform/jenkins/clusters/mgmt.yaml
+    - repoURL: 'https://github.com/taptech/taptech-gitops.git'
+      targetRevision: main
+      ref: values
+    - repoURL: 'https://github.com/taptech/taptech-gitops.git'
+      targetRevision: main
+      path: platform/jenkins/manifests/mgmt
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]

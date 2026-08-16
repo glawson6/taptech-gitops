@@ -1,0 +1,10 @@
+# No Grafana here -- it lives on the management cluster and queries this
+# Prometheus remotely. Running a second Grafana would mean maintaining
+# dashboards and alert routing twice.
+grafana:
+  enabled: false
+prometheus:
+  ingress:
+    enabled: false          # TODO: enable with auth once you decide how mgmt reaches this
+    ingressClassName: nginx
+    hosts: [prometheus.taptech.net]

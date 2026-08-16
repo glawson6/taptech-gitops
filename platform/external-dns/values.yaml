@@ -1,0 +1,18 @@
+# TODO: confirm the provider before enabling these Applications.
+provider:
+  name: cloudflare          # or route53 / rfc2136 for internal DNS
+policy: sync                # 'upsert-only' if it should never delete records
+registry: txt
+domainFilters:
+  - taptech.net             # TODO confirm the zone
+sources:
+  - ingress
+  - service
+env:
+  - name: CF_API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: external-dns-cloudflare   # created by the ExternalSecret in manifests/
+        key: apiToken
+resources:
+  requests: {cpu: 10m, memory: 64Mi}

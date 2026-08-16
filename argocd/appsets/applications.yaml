@@ -1,0 +1,76 @@
+# One ApplicationSet for every environment on every application cluster.
+#
+# matrix = list x git. The list defines environments; the git generator then
+# scans that environment's overlay directories. Parameters from the first
+# generator interpolate into the second, which is why {{.env}} works in the
+# path below. Adding an environment is adding ONE list element -- no new
+# ApplicationSet, no new files under argocd/.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: applications
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - matrix:
+        generators:
+          - list:
+              elements:
+                - env: prod
+                  # Cluster NAME as registered with 'argocd cluster add --name'.
+                  # Never a URL: the endpoint lives in the cluster secret, not git.
+                  cluster: apps-prod
+                  namespace: taptech-prod
+                  autoSync: "false"
+                # Adding the K3s cluster later is exactly this, uncommented:
+                # - env: staging
+                #   cluster: apps-k3s
+                #   namespace: taptech-staging
+                #   autoSync: "true"
+          - git:
+              repoURL: 'https://github.com/taptech/taptech-gitops.git'
+              revision: main
+              directories:
+                - path: 'applications/*/overlays/{{.env}}'
+  template:
+    metadata:
+      name: '{{index .path.segments 1}}-{{.env}}'
+      labels:
+        taptech.net/service: '{{index .path.segments 1}}'
+        taptech.net/env: '{{.env}}'
+        taptech.net/cluster: '{{.cluster}}'
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: applications
+      source:
+        repoURL: 'https://github.com/taptech/taptech-gitops.git'
+        targetRevision: main
+        path: '{{.path.path}}'
+      destination:
+        name: '{{.cluster}}'
+        namespace: '{{.namespace}}'
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=false   # platform/app-namespaces owns the namespaces
+        retry:
+          limit: 3
+          backoff:
+            duration: 10s
+            factor: 2
+            maxDuration: 3m
+  # prod has no 'automated' block above: a Jenkins tag-bump commit makes the
+  # Application OutOfSync and waits for a human. With no dev environment to
+  # catch problems first, that gate is the only one there is.
+  templatePatch: |
+    {{- if eq .autoSync "true" }}
+    spec:
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+    {{- end }}
+  syncPolicy:
+    preserveResourcesOnDeletion: true

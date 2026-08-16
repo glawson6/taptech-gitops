@@ -1,0 +1,37 @@
+# Argo CD on the management cluster, managing itself plus every app cluster.
+global:
+  domain: argocd.taptech.net      # TODO confirm
+configs:
+  params:
+    # TLS terminates at ingress-nginx; running the server insecure behind it
+    # avoids the double-TLS redirect loop that otherwise bites here.
+    server.insecure: true
+    # Applications live in the argocd namespace only.
+    application.namespaces: ""
+  cm:
+    # Kustomize needs this if a service ever inflates a Helm chart.
+    kustomize.buildOptions: --enable-helm
+    timeout.reconciliation: 180s
+server:
+  replicas: 1
+  ingress:
+    enabled: false          # enable once ingress + cert-manager are healthy
+    ingressClassName: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    tls: true
+repoServer:
+  replicas: 1
+  resources:
+    requests: {cpu: 50m, memory: 256Mi}
+applicationSet:
+  replicas: 1
+controller:
+  resources:
+    requests: {cpu: 100m, memory: 512Mi}
+redis:
+  enabled: true
+dex:
+  enabled: false            # enable when you wire SSO
+notifications:
+  enabled: false

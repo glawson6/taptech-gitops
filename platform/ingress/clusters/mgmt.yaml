@@ -1,0 +1,13 @@
+# Single-node MicroK8s: DaemonSet + hostPort binds the controller directly to
+# the node's :80 and :443. No LoadBalancer exists on the box, so a Service of
+# type LoadBalancer would sit in <pending> forever. The microk8s `ingress`
+# addon is disabled by scripts/prep-microk8s.sh so it doesn't collide with
+# this controller for the same host ports.
+controller:
+  kind: DaemonSet
+  hostPort:
+    enabled: true
+    ports: {http: 80, https: 443}
+  service:
+    enabled: true
+    type: NodePort
