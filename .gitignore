@@ -8,6 +8,9 @@
 *.dec.yaml
 secret-*.yaml
 !*sealed*.yaml
+# `secret-stores.yaml` is an ArgoCD Application manifest wiring the ESO
+# ClusterSecretStore -- structural, no credentials. Un-ignore it.
+!secret-stores.yaml
 
 # staged for removal - delete this folder
 _to_delete/
