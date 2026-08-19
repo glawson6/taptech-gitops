@@ -31,4 +31,10 @@ spec:
       path: platform/ingress/manifests/mgmt
   syncPolicy:
     automated: {prune: true, selfHeal: true}
-    syncOptions: [CreateNamespace=true, ServerSideApply=true]
+    # ApplyOutOfSyncOnly: sync-wave health barriers here have wedged whole-app
+    # retries when only one resource is drifted. Only touch drifted resources.
+    # See platform/ingress/clusters/mgmt.yaml for why admissionWebhooks is off.
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - ApplyOutOfSyncOnly=true

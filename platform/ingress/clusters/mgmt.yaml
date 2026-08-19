@@ -11,3 +11,11 @@ controller:
   service:
     enabled: true
     type: NodePort
+  # The admission webhook needs a PreSync Job to provision its TLS cert
+  # (kube-webhook-certgen). On a resource-tight single-node mgmt cluster
+  # that Job has repeatedly stalled and left ArgoCD stuck waiting for it,
+  # blocking every subsequent sync-wave. Skip it here: this cluster's
+  # small trusted user base doesn't need runtime validation of Ingress
+  # specs, and ArgoCD already server-side validates before applying.
+  admissionWebhooks:
+    enabled: false

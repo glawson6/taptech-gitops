@@ -31,4 +31,16 @@ spec:
       path: platform/cert-manager/manifests/mgmt
   syncPolicy:
     automated: {prune: true, selfHeal: true}
-    syncOptions: [CreateNamespace=true, ServerSideApply=true]
+    # SkipDryRunOnMissingResource: the ClusterIssuer manifests reference the
+    # cert-manager.io CRDs, which are installed by this same Helm release. On
+    # first sync the CRDs don't exist yet so the dry-run rejects the CI. This
+    # flag defers dry-run for missing resources so the sync can proceed and
+    # install the CRDs first.
+    # ApplyOutOfSyncOnly: with sync-wave health barriers, ArgoCD sometimes
+    # gets wedged retrying the whole app when only one resource is out. Only
+    # touch drifted resources.
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true
+      - ApplyOutOfSyncOnly=true
