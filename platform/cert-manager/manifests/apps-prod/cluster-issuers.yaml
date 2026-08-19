@@ -1,4 +1,7 @@
-# Applied a wave after the chart so the CRDs exist.
+# Applied at sync-wave 4 so the cert-manager Helm chart (default wave 0) has
+# already installed the CRDs AND the webhook Deployment is running -- otherwise
+# the ClusterIssuer applies but never reaches Ready because there's no webhook
+# to validate it, and ArgoCD blocks the whole App on the health barrier.
 # Let's Encrypt rate-limits per registered domain, and both clusters request
 # certs for taptech.net -- staging first on a new cluster is not optional advice.
 apiVersion: cert-manager.io/v1
@@ -6,7 +9,7 @@ kind: ClusterIssuer
 metadata:
   name: letsencrypt-staging
   annotations:
-    argocd.argoproj.io/sync-wave: "-4"
+    argocd.argoproj.io/sync-wave: "4"
 spec:
   acme:
     server: https://acme-staging-v02.api.letsencrypt.org/directory
@@ -23,7 +26,7 @@ kind: ClusterIssuer
 metadata:
   name: letsencrypt-prod
   annotations:
-    argocd.argoproj.io/sync-wave: "-4"
+    argocd.argoproj.io/sync-wave: "4"
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
