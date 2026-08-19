@@ -16,7 +16,12 @@ spec:
     path: argocd
     directory:
       recurse: true
-      exclude: 'bootstrap/*'
+      # Applications in clusters/apps-prod/ target `destination.name: apps-prod`,
+      # which resolves via ArgoCD's cluster registry. Until that cluster is
+      # registered (`argocd cluster add ... --name apps-prod` -- see
+      # docs/adding-a-cluster.md), sync waves stall waiting on those apps.
+      # Un-exclude the moment the apps cluster is registered.
+      exclude: '{bootstrap/*,clusters/apps-prod/*}'
   destination:
     name: in-cluster
     namespace: argocd
