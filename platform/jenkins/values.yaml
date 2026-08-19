@@ -36,6 +36,16 @@ controller:
                 jenkinsTunnel: "jenkins-agent.jenkins.svc.cluster.local:50000"
                 containerCapStr: "10"
                 podRetention: "never"
+  sidecars:
+    # k8s-sidecar 2.10.1 uses Python 3.15 which rejects the MicroK8s CA
+    # cert with "CA cert does not include key usage extension". MicroK8s'
+    # in-cluster CA doesn't set the keyUsage extension. Skip verification
+    # -- the sidecar only talks to the in-cluster API which is otherwise
+    # trusted, and the auto-reload watches ConfigMaps in its own namespace.
+    configAutoReload:
+      env:
+        - name: SKIP_TLS_VERIFY
+          value: "true"
   serviceAccount:
     create: true
     name: jenkins
