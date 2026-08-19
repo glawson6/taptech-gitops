@@ -16,12 +16,19 @@ spec:
     path: argocd
     directory:
       recurse: true
-      # Applications in clusters/apps-prod/ target `destination.name: apps-prod`,
-      # which resolves via ArgoCD's cluster registry. Until that cluster is
-      # registered (`argocd cluster add ... --name apps-prod` -- see
-      # docs/adding-a-cluster.md), sync waves stall waiting on those apps.
-      # Un-exclude the moment the apps cluster is registered.
-      exclude: '{bootstrap/*,clusters/apps-prod/*}'
+      # Excluded until the apps-prod cluster is registered with ArgoCD
+      # (`argocd cluster add ... --name apps-prod`, see docs/adding-a-cluster.md):
+      #
+      #   - clusters/apps-prod/*  -- Applications targeting the apps cluster
+      #   - appsets/*             -- ApplicationSets generating child Apps for
+      #                              app clusters; sets ErrorOccurred until the
+      #                              destination cluster resolves, and that
+      #                              propagates back as a failed sync task on
+      #                              root, blocking wave advancement to the
+      #                              mgmt-* Apps in later waves.
+      #
+      # Un-exclude both the moment the apps cluster is registered.
+      exclude: '{bootstrap/*,clusters/apps-prod/*,appsets/*}'
   destination:
     name: in-cluster
     namespace: argocd
