@@ -51,7 +51,7 @@ server:
       # Restrict UI access to trusted IPs. TODO: replace <YOUR-IP>/32 with your
       # workstation public IP; add CIDRs comma-separated. Remove the annotation
       # entirely to make it public (auth-only). See docs/mgmt-ui-inventory.md.
-      nginx.ingress.kubernetes.io/whitelist-source-range: "REPLACE-WITH-YOUR-IP/32"
+      nginx.ingress.kubernetes.io/whitelist-source-range: "104.14.172.65/32"
     hostname: argocd.taptech.net
     tls: true
 repoServer:

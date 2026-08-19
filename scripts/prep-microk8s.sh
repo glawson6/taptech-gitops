@@ -22,12 +22,12 @@ sudo microk8s status --wait-ready
 #   hostpath-storage -- backs the taptech-standard StorageClass
 #   rbac             -- enforces the Roles ArgoCD/ExternalSecrets create
 #
-# NOT enabled: `ingress`. The `microk8s enable ingress` addon installs its
-# own NGINX DaemonSet on host ports 80/443 and registers an IngressClass
-# called `nginx` -- both collide with the ingress-nginx Helm chart that
-# ArgoCD manages (platform/ingress, wave -3). One controller only, and it
-# must be the git-managed one. If the addon was ever turned on, disable it
-# below.
+# NOT enabled: `ingress`. Recent MicroK8s ships Traefik as the default
+# ingress addon (older versions shipped NGINX); either way it grabs host
+# ports 80/443 and registers its own IngressClass, colliding with the
+# ingress-nginx Helm chart that ArgoCD manages (platform/ingress, wave -3).
+# One controller only, and it must be the git-managed one. If the addon
+# was ever turned on, disable it below.
 #
 # MetalLB is optional. Enable it only if this box has a LAN with a spare IP
 # range to hand out. On a single public-IP VM the ingress-nginx Service's

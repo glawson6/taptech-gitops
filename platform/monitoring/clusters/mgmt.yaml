@@ -17,7 +17,7 @@ grafana:
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt-staging
       # UI allowlist. TODO: set your workstation IP. See docs/mgmt-ui-inventory.md.
-      nginx.ingress.kubernetes.io/whitelist-source-range: "REPLACE-WITH-YOUR-IP/32"
+      nginx.ingress.kubernetes.io/whitelist-source-range: "104.14.172.65/32"
     tls:
       - hosts: [grafana.taptech.net]
         secretName: grafana-tls
