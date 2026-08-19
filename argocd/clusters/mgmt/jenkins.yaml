@@ -15,7 +15,7 @@ spec:
   sources:
     - repoURL: 'https://charts.jenkins.io'
       chart: jenkins
-      targetRevision: 5.8.16   # VERIFY: helm search repo <repo>/jenkins --versions
+      targetRevision: 5.9.54   # ships Jenkins 2.568.2. VERIFY: helm search repo jenkins/jenkins --versions
       helm:
         releaseName: jenkins
         valueFiles:
