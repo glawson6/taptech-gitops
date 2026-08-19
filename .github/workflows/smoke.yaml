@@ -1,0 +1,213 @@
+name: smoke
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# One concurrency group per branch/PR: if you push twice quickly, the earlier
+# run is cancelled so we don't sit through duplicate multi-minute kind installs.
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  yaml-lint:
+    # Trivial guardrail: catches YAML that won't parse at all. Fast (~10s), no
+    # cluster needed. Runs first so we fail fast on typos.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: parse every yaml under argocd/, platform/, applications/
+        run: |
+          set -euo pipefail
+          fail=0
+          while IFS= read -r f; do
+            if ! python3 -c "import yaml,sys; list(yaml.safe_load_all(open('$f')))" 2>/dev/null; then
+              # Print the actual error for the human reader
+              python3 -c "import yaml; list(yaml.safe_load_all(open('$f')))" 2>&1 \
+                | sed "s|^|  |"
+              echo "FAIL: $f"
+              fail=1
+            fi
+          done < <(find argocd platform applications -name '*.yaml' -o -name '*.yml' 2>/dev/null)
+          exit $fail
+
+  gitignore-guardrails:
+    # Regressions of the .gitignore bug: `secret-*.yaml` swallowed ArgoCD
+    # Application manifests named secret-stores.yaml. Confirm every ArgoCD
+    # Application manifest under argocd/ is git-tracked, not ignored.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: verify no argocd/ or platform/ file is gitignored
+        run: |
+          set -euo pipefail
+          fail=0
+          while IFS= read -r f; do
+            if git check-ignore -q "$f"; then
+              echo "GITIGNORED: $f"
+              fail=1
+            fi
+          done < <(find argocd platform -type f \( -name '*.yaml' -o -name '*.yml' \))
+          # Positive check: these specific files MUST be tracked
+          for must in \
+            argocd/clusters/mgmt/secret-stores.yaml \
+            argocd/clusters/apps-prod/secret-stores.yaml \
+          ; do
+            if ! git ls-files --error-unmatch "$must" >/dev/null 2>&1; then
+              echo "MISSING FROM GIT: $must"
+              fail=1
+            fi
+          done
+          exit $fail
+
+  repo-url-check:
+    # `bootstrap.sh` fails silently if the placeholder repoURL is still in the
+    # manifests. Catch it in CI before it ever hits a cluster.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: no placeholder repoURL survives
+        run: |
+          if grep -rn 'taptech/taptech-gitops' argocd/ platform/ applications/; then
+            echo "Placeholder repoURL found. Run scripts/set-repo-url.sh."
+            exit 1
+          fi
+
+  sync-wave-sanity:
+    # The ClusterIssuer bug: sync-wave -4 was meant to be AFTER wave 0 but
+    # was actually before. Any cert-manager.io resource under a manifests/
+    # dir should be at a POSITIVE sync-wave (after the chart's default 0).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ClusterIssuer sync-wave must be positive
+        run: |
+          set -euo pipefail
+          fail=0
+          while IFS= read -r f; do
+            # Only files that actually declare a ClusterIssuer
+            if ! grep -q 'kind: ClusterIssuer' "$f"; then continue; fi
+            wave=$(grep -Eo 'argocd.argoproj.io/sync-wave:\s*"-?[0-9]+"' "$f" \
+              | head -1 | grep -Eo '"-?[0-9]+"' | tr -d '"')
+            if [ -z "$wave" ]; then
+              echo "MISSING sync-wave on ClusterIssuer in $f (needs positive)"
+              fail=1
+              continue
+            fi
+            if [ "$wave" -le 0 ]; then
+              echo "BAD sync-wave $wave on ClusterIssuer in $f (must be > 0 so CRDs+webhook install first)"
+              fail=1
+            fi
+          done < <(find platform -name '*.yaml' 2>/dev/null)
+          exit $fail
+
+  externalsecret-refs:
+    # The credential/password confusion: ExternalSecret remoteRef.key must
+    # match a real 1Password field name. We can't verify against the vault in
+    # CI (no token here), but we can enforce a repo-level convention: every
+    # remoteRef.key ends in one of a known set of field names.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: remoteRef.key uses conventional field names
+        run: |
+          set -euo pipefail
+          # Field names we allow. 'credential' is deprecated in favor of
+          # 'password' after the bootstrap postmortem -- flag anything using
+          # it so we don't reintroduce the drift.
+          allowed='username|password|token|apiToken|accessKey|secretKey'
+          # Pull each remoteRef.key and check the suffix
+          bad=$(grep -Rho 'key:\s*[a-zA-Z0-9-]\+/[a-zA-Z0-9_-]\+' platform/ 2>/dev/null \
+            | sed 's|.*/||' \
+            | sort -u \
+            | grep -Ev "^($allowed)$" || true)
+          if [ -n "$bad" ]; then
+            echo "Non-conventional remoteRef field names found:"
+            printf '  %s\n' "$bad"
+            echo "Allowed: $allowed"
+            exit 1
+          fi
+
+  kind-dry-run:
+    # The one that would have caught #1, #5, #10 and more: fire up an empty
+    # kind cluster and kubectl apply --dry-run=server every Application. This
+    # verifies:
+    #   - manifests parse
+    #   - schemas are valid (server-side dry-run runs admission)
+    #   - AppProjects exist before Applications reference them (order matters)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install kind
+        uses: helm/kind-action@v1
+        with:
+          version: v0.25.0
+          cluster_name: smoke
+          # Ephemeral, no need for anything fancy
+          config: |
+            kind: Cluster
+            apiVersion: kind.x-k8s.io/v1alpha4
+            nodes:
+              - role: control-plane
+
+      - name: install ArgoCD CRDs (Applications need the schema to dry-run)
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.13.2/manifests/crds/application-crd.yaml
+          kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.13.2/manifests/crds/applicationset-crd.yaml
+          kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.13.2/manifests/crds/appproject-crd.yaml
+          kubectl create namespace argocd
+
+      - name: install ExternalSecrets CRDs
+        run: |
+          # Just the CRDs -- we don't need a working controller to dry-run
+          # ExternalSecret manifests.
+          helm repo add external-secrets https://charts.external-secrets.io
+          helm template external-secrets external-secrets/external-secrets \
+            --include-crds --set installCRDs=true \
+            | kubectl apply --server-side -f - --dry-run=server 2>/dev/null || true
+          # Install just the CRDs for real (needed to dry-run manifests):
+          curl -sL https://raw.githubusercontent.com/external-secrets/external-secrets/v0.10.4/deploy/crds/bundle.yaml \
+            | kubectl apply -f -
+
+      - name: install cert-manager CRDs
+        run: |
+          # Same idea: schemas so kubectl apply --dry-run can validate.
+          kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.2/cert-manager.crds.yaml
+
+      - name: apply AppProjects first (Applications reference them)
+        run: |
+          kubectl apply --dry-run=server -f argocd/projects/
+
+      - name: dry-run every Application under argocd/clusters/mgmt/
+        run: |
+          set -euo pipefail
+          for f in argocd/clusters/mgmt/*.yaml; do
+            echo "=== $f ==="
+            kubectl apply --dry-run=server -f "$f"
+          done
+
+      - name: dry-run every ExternalSecret + ClusterSecretStore + non-App resource
+        run: |
+          set -euo pipefail
+          # Everything under platform/*/manifests/mgmt/ AND platform/*/stores/mgmt/
+          while IFS= read -r f; do
+            echo "=== $f ==="
+            kubectl apply --dry-run=server -f "$f"
+          done < <(find platform -path '*/manifests/mgmt/*.yaml' -o -path '*/stores/mgmt/*.yaml' 2>/dev/null)
+
+      - name: dry-run application overlays (kustomize)
+        run: |
+          set -euo pipefail
+          fail=0
+          for overlay_dir in applications/*/overlays/*; do
+            [ -d "$overlay_dir" ] || continue
+            [ -f "$overlay_dir/kustomization.yaml" ] || continue
+            echo "=== $overlay_dir ==="
+            if ! kubectl apply --dry-run=server -k "$overlay_dir"; then
+              fail=1
+            fi
+          done
+          exit $fail

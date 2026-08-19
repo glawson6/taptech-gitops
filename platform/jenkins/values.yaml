@@ -16,9 +16,19 @@ controller:
     - job-dsl:latest
   installLatestPlugins: true
   ingress:
-    enabled: false          # enable once ingress + cert-manager are healthy
+    enabled: true
     ingressClassName: nginx
     hostName: jenkins.taptech.net
+    tls:
+      - hosts: [jenkins.taptech.net]
+        secretName: jenkins-tls
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-staging
+      # Jenkins is chatty; bump proxy buffer sizes so large plugin uploads
+      # and long build-log streams don't die at the ingress.
+      nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
   JCasC:
     defaultConfig: true
     configScripts:

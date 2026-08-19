@@ -1,15 +1,25 @@
-# Mgmt-cluster overrides. Ingress stays off until cert-manager is healthy on
-# this cluster -- flip `ingress.enabled` to true once you have a ClusterIssuer
-# and DNS pointing at the ingress controller.
+# Mgmt-cluster overrides for MinIO. Both ingresses target subdomains of
+# taptech.net; cert-manager (letsencrypt-staging) issues certs. Swap the
+# annotation to letsencrypt-prod once staging certs render successfully.
 ingress:
-  enabled: false
+  enabled: true
   ingressClassName: nginx
   hosts:
     - minio.taptech.net
-  tls: []
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+    # MinIO's S3 API expects large uploads; unblock them at the ingress.
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+  tls:
+    - hosts: [minio.taptech.net]
+      secretName: minio-tls
 consoleIngress:
-  enabled: false
+  enabled: true
   ingressClassName: nginx
   hosts:
     - minio-console.taptech.net
-  tls: []
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+  tls:
+    - hosts: [minio-console.taptech.net]
+      secretName: minio-console-tls

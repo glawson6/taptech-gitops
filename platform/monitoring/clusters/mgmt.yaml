@@ -11,9 +11,14 @@ grafana:
     storageClassName: taptech-standard
     size: 5Gi
   ingress:
-    enabled: false          # enable once ingress + cert-manager are healthy
+    enabled: true
     ingressClassName: nginx
     hosts: [grafana.taptech.net]
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-staging
+    tls:
+      - hosts: [grafana.taptech.net]
+        secretName: grafana-tls
   additionalDataSources:
     - name: prometheus-apps-prod
       type: prometheus
