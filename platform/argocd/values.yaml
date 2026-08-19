@@ -23,13 +23,17 @@ configs:
     # /status is a belt to that suspenders in case managed-fields tracking
     # ever drops.
     resource.customizations.ignoreDifferences.external-secrets.io_ExternalSecret: |
-      managedFieldsManagers:
-        - external-secrets
       jsonPointers:
         - /status
+      jqPathExpressions:
+        # ESO's admission webhook fills in these defaults on every remoteRef
+        # after ArgoCD applies. Strip them from the diff so specs that just
+        # say `remoteRef: {key: foo/bar}` don't show OutOfSync forever.
+        - .spec.data[]?.remoteRef.conversionStrategy
+        - .spec.data[]?.remoteRef.decodingStrategy
+        - .spec.data[]?.remoteRef.metadataPolicy
+        - .spec.data[]?.remoteRef.nullBytePolicy
     resource.customizations.ignoreDifferences.external-secrets.io_ClusterSecretStore: |
-      managedFieldsManagers:
-        - external-secrets
       jsonPointers:
         - /status
 server:
