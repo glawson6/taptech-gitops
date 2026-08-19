@@ -14,6 +14,12 @@ controller:
     - configuration-as-code:latest
     - credentials-binding:latest
     - job-dsl:latest
+    # AWS-S3-compatible plugins to talk to MinIO. Despite the name, these
+    # plugins never call AWS: `withAWS(endpointUrl: 'http://minio...')` in
+    # pipelines routes every request to the in-cluster MinIO service. The
+    # credential type is just Jenkins's shape for an accessKey/secretKey pair.
+    - aws-credentials:latest
+    - pipeline-aws:latest
   installLatestPlugins: true
   ingress:
     enabled: true
@@ -29,6 +35,15 @@ controller:
       nginx.ingress.kubernetes.io/proxy-body-size: "50m"
       nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
       nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  # additionalExistingSecrets projects K8s Secrets into the controller as env
+  # vars named `<secretName>-<keyName>`. JCasC references those env vars via
+  # `${name}` substitution below. Rotating the K8s Secret content triggers a
+  # Reloader restart of the Jenkins pod (annotation on the ExternalSecret).
+  additionalExistingSecrets:
+    - name: minio-jenkins
+      keyName: accessKey
+    - name: minio-jenkins
+      keyName: secretKey
   JCasC:
     defaultConfig: true
     configScripts:
@@ -46,6 +61,27 @@ controller:
                 jenkinsTunnel: "jenkins-agent.jenkins.svc.cluster.local:50000"
                 containerCapStr: "10"
                 podRetention: "never"
+      minio: |
+        # Register MinIO as an "AWS Credentials" entry so the pipeline-aws
+        # plugin's withAWS() step can use it. The credentials themselves come
+        # from env vars projected by additionalExistingSecrets above; JCasC
+        # substitutes ${name} at controller startup.
+        credentials:
+          system:
+            domainCredentials:
+              - credentials:
+                  - aws:
+                      scope: GLOBAL
+                      id: minio-jenkins
+                      description: "MinIO S3 credentials (mgmt cluster)"
+                      accessKey: "${minio-jenkins-accessKey}"
+                      secretKey: "${minio-jenkins-secretKey}"
+        unclassified:
+          # Global default so pipelines don't need to repeat the endpoint on
+          # every withAWS() call. Region is required by the AWS SDK even for
+          # non-AWS S3; any value works.
+          awsCredentialsBinding:
+            defaultCredentialsId: "minio-jenkins"
   sidecars:
     # k8s-sidecar 2.10.1 uses Python 3.15 which rejects the MicroK8s CA
     # cert with "CA cert does not include key usage extension". MicroK8s'
