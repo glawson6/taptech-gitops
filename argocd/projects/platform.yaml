@@ -17,6 +17,7 @@ spec:
     - 'https://stakater.github.io/stakater-charts'
     - 'https://charts.jenkins.io'
     - 'https://argoproj.github.io/argo-helm'
+    - 'https://charts.min.io'
   destinations:
     - name: '*'
       namespace: '*'
