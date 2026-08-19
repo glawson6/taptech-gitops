@@ -35,6 +35,11 @@ controller:
       nginx.ingress.kubernetes.io/proxy-body-size: "50m"
       nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
       nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+      # UI allowlist. TODO: set your workstation IP. If Jenkins needs to
+      # receive GitHub/GitLab webhooks, add their published CIDR ranges:
+      #   https://api.github.com/meta  (see .hooks)
+      # See docs/mgmt-ui-inventory.md for the pattern.
+      nginx.ingress.kubernetes.io/whitelist-source-range: "REPLACE-WITH-YOUR-IP/32"
   # additionalExistingSecrets projects K8s Secrets into the controller as env
   # vars named `<secretName>-<keyName>`. JCasC references those env vars via
   # `${name}` substitution below. Rotating the K8s Secret content triggers a

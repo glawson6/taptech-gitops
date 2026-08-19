@@ -20,6 +20,11 @@ consoleIngress:
     - minio-console.taptech.net
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-staging
+    # Console (browser UI) is admin-facing -- allowlist. TODO: your IP.
+    # NOTE: the S3 API ingress above (minio.taptech.net) intentionally has NO
+    # allowlist so external CI/tools can push objects with valid credentials.
+    # If you never need external S3 access, add the same annotation there too.
+    nginx.ingress.kubernetes.io/whitelist-source-range: "REPLACE-WITH-YOUR-IP/32"
   tls:
     - hosts: [minio-console.taptech.net]
       secretName: minio-console-tls

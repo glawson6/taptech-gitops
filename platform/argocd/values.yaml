@@ -48,6 +48,10 @@ server:
       # server.insecure=true above means ArgoCD server serves plain HTTP; the
       # ingress terminates TLS and forwards HTTP internally.
       nginx.ingress.kubernetes.io/backend-protocol: HTTP
+      # Restrict UI access to trusted IPs. TODO: replace <YOUR-IP>/32 with your
+      # workstation public IP; add CIDRs comma-separated. Remove the annotation
+      # entirely to make it public (auth-only). See docs/mgmt-ui-inventory.md.
+      nginx.ingress.kubernetes.io/whitelist-source-range: "REPLACE-WITH-YOUR-IP/32"
     hostname: argocd.taptech.net
     tls: true
 repoServer:
