@@ -12,6 +12,17 @@ configs:
     # Kustomize needs this if a service ever inflates a Helm chart.
     kustomize.buildOptions: --enable-helm
     timeout.reconciliation: 180s
+    # Cosmetic drift suppression. ArgoCD's default diff treats any change to a
+    # tracked resource's status as drift. Some CRDs mutate their own status on
+    # every reconcile (refresh times, sync counts, resource versions); without
+    # this, every ExternalSecret shows OutOfSync forever even though the spec
+    # matches git perfectly. Applied cluster-wide so we don't repeat it per App.
+    resource.customizations.ignoreDifferences.external-secrets.io_ExternalSecret: |
+      jsonPointers:
+        - /status
+    resource.customizations.ignoreDifferences.external-secrets.io_ClusterSecretStore: |
+      jsonPointers:
+        - /status
 server:
   replicas: 1
   ingress:

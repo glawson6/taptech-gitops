@@ -32,6 +32,9 @@ spec:
     - repoURL: 'https://github.com/glawson6/taptech-gitops.git'
       targetRevision: main
       ref: values
+    - repoURL: 'https://github.com/glawson6/taptech-gitops.git'
+      targetRevision: main
+      path: platform/argocd/manifests/mgmt
   syncPolicy:
     automated:
       prune: false      # never prune Argo CD's own resources automatically
