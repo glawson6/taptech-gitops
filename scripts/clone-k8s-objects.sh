@@ -117,12 +117,20 @@ apply_or_save() {
   # Skip if the file has no items (kubectl errors 'no objects passed to apply')
   # or is missing entirely (dry-run path returns nothing).
   [ -f "$file" ] || return 0
-  local n_items
-  n_items=$(jq '.items // [] | length' "$file" 2>/dev/null)
-  if [ -z "$n_items" ] || [ "$n_items" -eq 0 ]; then
-    # Delete the empty file so /tmp/clone-* stays uncluttered.
-    rm -f "$file"
-    return 0
+  # Two shapes appear in this pipeline: List objects (from `kubectl get -o
+  # json`, have .items[]) and single objects (from `kubectl get <name> -o
+  # json`, no .items). Only skip the file when it IS a List AND its items
+  # array is empty. A single object doesn't have .items so we should never
+  # skip it.
+  local kind n_items
+  kind=$(jq -r '.kind // ""' "$file" 2>/dev/null)
+  if [ "$kind" = "List" ] || echo "$kind" | grep -q List$; then
+    n_items=$(jq '.items // [] | length' "$file" 2>/dev/null)
+    if [ -z "$n_items" ] || [ "$n_items" -eq 0 ]; then
+      # Delete the empty file so /tmp/clone-* stays uncluttered.
+      rm -f "$file"
+      return 0
+    fi
   fi
   if [ "$LIVE" -eq 1 ]; then
     kubectl --context "$DEST" apply --server-side --force-conflicts -f "$file" >/dev/null \
