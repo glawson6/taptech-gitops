@@ -234,7 +234,12 @@ place. That's created by hand once per cluster during
 - **`docs/secrets.md`** — 1Password + ESO wiring.
 - **`docs/adding-a-cluster.md`** — how to onboard a new apps cluster.
 - **`docs/apps-prod-migration.md`** — comprehensive plan for
-  adopting the live 23.227.173.107 cluster.
+  adopting the live 23.227.173.107 cluster in place.
+- **`docs/temp-vps-migration.md`** — alternative plan: rent a temp
+  VPS, clone the cluster, wipe + rebuild original as GitOps
+  `apps-prod`. Faster (~5-7 days). Ships with three scripts:
+  `scripts/temp-vps-init.sh`, `scripts/clone-k8s-objects.sh`,
+  `scripts/rsync-pvc.sh`.
 - **`docs/what-went-wrong.md`** — postmortem of the 12-hour
   bootstrap session; every fix that shipped is documented here.
 - **`docs/bootstrap-mgmt-cluster.md`** — end-to-end bootstrap
