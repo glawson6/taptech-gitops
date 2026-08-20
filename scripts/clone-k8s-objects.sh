@@ -114,6 +114,16 @@ sanitize_pvc() {
 
 apply_or_save() {
   local file="$1" label="$2"
+  # Skip if the file has no items (kubectl errors 'no objects passed to apply')
+  # or is missing entirely (dry-run path returns nothing).
+  [ -f "$file" ] || return 0
+  local n_items
+  n_items=$(jq '.items // [] | length' "$file" 2>/dev/null)
+  if [ -z "$n_items" ] || [ "$n_items" -eq 0 ]; then
+    # Delete the empty file so /tmp/clone-* stays uncluttered.
+    rm -f "$file"
+    return 0
+  fi
   if [ "$LIVE" -eq 1 ]; then
     kubectl --context "$DEST" apply --server-side --force-conflicts -f "$file" >/dev/null \
       || warn "apply failed for ${label} (see ${file})"
@@ -122,18 +132,20 @@ apply_or_save() {
 
 # --- 1. Namespaces --------------------------------------------------------
 say "namespaces"
-NS_LIST=$(kubectl --context "$SRC" get ns -o json \
-  | jq -r --arg skip "$SKIP_NAMESPACES" --arg only "$ONLY_NAMESPACES" '
-      .items[].metadata.name
-      | select(
-          if $only != "" then
-            ([$only | split(",")[]] | index(.)) != null
-          else
-            true
-          end)
-      | select(
-          ([$skip | split(",")[]] | index(.)) == null)
-    ')
+ALL_NS=$(kubectl --context "$SRC" get ns -o json | jq -r '.items[].metadata.name')
+# --only-namespaces takes precedence: if set, only those are included.
+if [ -n "$ONLY_NAMESPACES" ]; then
+  ONLY_PATTERNS=$(echo "$ONLY_NAMESPACES" | tr ',' '\n')
+  NS_LIST=$(echo "$ALL_NS" | grep -Fxf <(echo "$ONLY_PATTERNS"))
+else
+  SKIP_PATTERNS=$(echo "$SKIP_NAMESPACES" | tr ',' '\n')
+  NS_LIST=$(echo "$ALL_NS" | grep -vFxf <(echo "$SKIP_PATTERNS"))
+fi
+
+if [ -z "$NS_LIST" ]; then
+  die "no namespaces to clone after filtering (--skip='${SKIP_NAMESPACES}' --only='${ONLY_NAMESPACES}')"
+fi
+say "namespaces to clone: $(echo "$NS_LIST" | tr '\n' ' ')"
 echo "$NS_LIST" | while read -r ns; do
   [ -z "$ns" ] && continue
   kubectl --context "$SRC" get ns "$ns" -o json \
@@ -163,7 +175,12 @@ fi
 # then PVCs (workloads mount them), then Services + Ingresses + workloads.
 NAMESPACED_EARLY=(secrets configmaps serviceaccounts roles rolebindings)
 NAMESPACED_MID=(persistentvolumeclaims services ingresses)
-NAMESPACED_WORKLOADS=(deployments statefulsets daemonsets)
+# NOTE: DaemonSets NOT in this list. DaemonSet.spec has no .replicas field
+# (kubectl rejects the manifest if we set it), and DaemonSets on the temp box
+# are already provided by MicroK8s addons (calico-node, ingress). Copying a
+# DaemonSet with `sanitize` still fails to apply because the ownership
+# references and node-scoped tolerations rarely translate.
+NAMESPACED_WORKLOADS=(deployments statefulsets)
 NAMESPACED_JOBS=(cronjobs)
 
 # ExternalSecret + OnePasswordItem CRs may or may not exist.
