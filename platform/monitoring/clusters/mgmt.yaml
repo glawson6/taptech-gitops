@@ -15,7 +15,7 @@ grafana:
     ingressClassName: nginx
     hosts: [grafana.taptech.net]
     annotations:
-      cert-manager.io/cluster-issuer: letsencrypt-staging
+      cert-manager.io/cluster-issuer: letsencrypt-prod
       # UI allowlist. TODO: set your workstation IP. See docs/mgmt-ui-inventory.md.
       nginx.ingress.kubernetes.io/whitelist-source-range: "104.14.172.65/32"
     tls:

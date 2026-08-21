@@ -29,7 +29,7 @@ controller:
       - hosts: [jenkins.taptech.net]
         secretName: jenkins-tls
     annotations:
-      cert-manager.io/cluster-issuer: letsencrypt-staging
+      cert-manager.io/cluster-issuer: letsencrypt-prod
       # Jenkins is chatty; bump proxy buffer sizes so large plugin uploads
       # and long build-log streams don't die at the ingress.
       nginx.ingress.kubernetes.io/proxy-body-size: "50m"

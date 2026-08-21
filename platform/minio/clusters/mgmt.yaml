@@ -1,13 +1,12 @@
 # Mgmt-cluster overrides for MinIO. Both ingresses target subdomains of
-# taptech.net; cert-manager (letsencrypt-staging) issues certs. Swap the
-# annotation to letsencrypt-prod once staging certs render successfully.
+# taptech.net; cert-manager (letsencrypt-prod) issues certs.
 ingress:
   enabled: true
   ingressClassName: nginx
   hosts:
     - minio.taptech.net
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-staging
+    cert-manager.io/cluster-issuer: letsencrypt-prod
     # MinIO's S3 API expects large uploads; unblock them at the ingress.
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
   tls:
@@ -19,7 +18,7 @@ consoleIngress:
   hosts:
     - minio-console.taptech.net
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-staging
+    cert-manager.io/cluster-issuer: letsencrypt-prod
     # Console (browser UI) is admin-facing -- allowlist. TODO: your IP.
     # NOTE: the S3 API ingress above (minio.taptech.net) intentionally has NO
     # allowlist so external CI/tools can push objects with valid credentials.

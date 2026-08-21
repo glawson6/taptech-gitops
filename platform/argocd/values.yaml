@@ -42,9 +42,7 @@ server:
     enabled: true
     ingressClassName: nginx
     annotations:
-      # Start on staging until you've confirmed DNS resolves for the host.
-      # Once green: swap to letsencrypt-prod for real certs.
-      cert-manager.io/cluster-issuer: letsencrypt-staging
+      cert-manager.io/cluster-issuer: letsencrypt-prod
       # server.insecure=true above means ArgoCD server serves plain HTTP; the
       # ingress terminates TLS and forwards HTTP internally.
       nginx.ingress.kubernetes.io/backend-protocol: HTTP
