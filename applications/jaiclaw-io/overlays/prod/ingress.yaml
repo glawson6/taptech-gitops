@@ -1,0 +1,37 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jaiclaw-io
+  labels:
+    app.kubernetes.io/name: jaiclaw-io
+    app.kubernetes.io/part-of: taptech
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/from-to-www-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [jaiclaw.io, www.jaiclaw.io]
+      secretName: jaiclaw-io-tls
+  rules:
+    - host: jaiclaw.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: jaiclaw-io
+                port:
+                  name: http
+    - host: www.jaiclaw.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: jaiclaw-io
+                port:
+                  name: http

@@ -1,0 +1,12 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaiclaw-io
+spec:
+  template:
+    spec:
+      containers:
+        - name: app
+          resources:
+            requests: {cpu: 200m, memory: 256Mi}
+            limits:   {cpu: 300m, memory: 512Mi}
