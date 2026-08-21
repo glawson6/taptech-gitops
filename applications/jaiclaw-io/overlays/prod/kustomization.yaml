@@ -3,24 +3,24 @@ kind: Kustomization
 
 namespace: taptech-prod
 resources:
-  - ../../base
-  - ingress.yaml
+- ../../base
+- ingress.yaml
 
 labels:
-  - includeSelectors: false
-    pairs:
-      taptech.net/env: prod
+- pairs:
+    taptech.net/env: prod
 
 replicas:
-  - name: jaiclaw-io
-    count: 1
+- count: 1
+  name: jaiclaw-io
 
 patches:
-  - path: patch-resources.yaml
+- path: patch-resources.yaml
 
 # ---- Jenkins writes this line ----
 #   kustomize edit set image tooling.taptech.net:5000/jaiclaw-io=tooling.taptech.net:5000/jaiclaw-io:<tag>
 # Keep it immutable (git sha or build number), never 'latest'.
 images:
-  - name: tooling.taptech.net:5000/jaiclaw-io
-    newTag: "0.0.0-bootstrap"
+- name: tooling.taptech.net:5000/jaiclaw-io
+  newName: tooling.taptech.net:5000/jaiclaw-io
+  newTag: 1.0.0-SNAPSHOT-20260821-173429-800d172
