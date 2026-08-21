@@ -16,19 +16,12 @@ spec:
     path: argocd
     directory:
       recurse: true
-      # Excluded until the apps-prod cluster is registered with ArgoCD
-      # (`argocd cluster add ... --name apps-prod`, see docs/adding-a-cluster.md):
-      #
-      #   - clusters/apps-prod/*  -- Applications targeting the apps cluster
-      #   - appsets/*             -- ApplicationSets generating child Apps for
-      #                              app clusters; sets ErrorOccurred until the
-      #                              destination cluster resolves, and that
-      #                              propagates back as a failed sync task on
-      #                              root, blocking wave advancement to the
-      #                              mgmt-* Apps in later waves.
-      #
-      # Un-exclude both the moment the apps cluster is registered.
-      exclude: '{bootstrap/*,clusters/apps-prod/*,appsets/*}'
+      # bootstrap/* is always excluded -- root.yaml applies itself; the rest
+      # of bootstrap/ is deliberately out-of-band (one-off installs).
+      # clusters/apps-prod/* and appsets/* were previously excluded until
+      # apps-prod was registered with ArgoCD; unblocked 2026-08-20 after
+      # `argocd cluster add taptech-prod --name apps-prod`.
+      exclude: '{bootstrap/*}'
   destination:
     name: in-cluster
     namespace: argocd
