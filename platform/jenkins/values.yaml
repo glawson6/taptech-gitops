@@ -56,6 +56,14 @@ controller:
       keyName: accessKey
     - name: minio-jenkins
       keyName: secretKey
+    # In-cluster AI agent user. Password comes from 1P vault item
+    # `jenkins-ai-agent` (fields username/password) via the ExternalSecret
+    # in platform/jenkins/manifests/mgmt/externalsecrets.yaml. JCasC
+    # substitutes ${jenkins-ai-agent-password} at controller startup.
+    - name: jenkins-ai-agent
+      keyName: username
+    - name: jenkins-ai-agent
+      keyName: password
   JCasC:
     defaultConfig: true
     configScripts:
@@ -73,6 +81,35 @@ controller:
                 jenkinsTunnel: "jenkins-agent.jenkins.svc.cluster.local:50000"
                 containerCapStr: "10"
                 podRetention: "never"
+      ai-agent-user: |
+        # Extra local user for the in-cluster AI agent. Password comes from
+        # 1Password via ESO (see externalsecrets.yaml + additionalExistingSecrets
+        # in this file). The agent authenticates over the internal service
+        # URL: http://jenkins.jenkins.svc.cluster.local:8080/
+        # so no ingress or allowlist crossing is involved.
+        #
+        # Redeclares the admin user because JCasC's securityRealm.local.users
+        # is a REPLACE-not-merge list; omitting admin here would lock out
+        # the human operator. Password references keep using the chart's
+        # ${chart-admin-*} substitutions.
+        #
+        # loggedInUsersCanDoAnything is inherited from defaultConfig; that
+        # gives ai-agent the same broad rights as admin. Deliberate per the
+        # "blanket Build permission" tradeoff -- if this token ever leaks,
+        # rotate the 1P item and Jenkins picks it up on next Reloader
+        # restart. Tighten with matrix-auth later if scope narrows.
+        jenkins:
+          securityRealm:
+            local:
+              allowsSignup: false
+              enableCaptcha: false
+              users:
+                - id: "${chart-admin-username}"
+                  name: "Jenkins Admin"
+                  password: "${chart-admin-password}"
+                - id: "${jenkins-ai-agent-username}"
+                  name: "AI Agent (in-cluster)"
+                  password: "${jenkins-ai-agent-password}"
       minio: |
         # Register MinIO as an "AWS Credentials" entry so the pipeline-aws
         # plugin's withAWS() step can use it. The credentials themselves come
