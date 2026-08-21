@@ -8,6 +8,10 @@
 *.dec.yaml
 secret-*.yaml
 !*sealed*.yaml
+# operator env files -- hold service-account tokens (1P, cloud, etc.)
+.env
+.env.*
+!.env.example
 # `secret-stores.yaml` is an ArgoCD Application manifest wiring the ESO
 # ClusterSecretStore -- structural, no credentials. Un-ignore it.
 !secret-stores.yaml
