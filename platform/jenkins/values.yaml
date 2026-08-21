@@ -20,6 +20,13 @@ controller:
     # credential type is just Jenkins's shape for an accessKey/secretKey pair.
     - aws-credentials:latest
     - pipeline-aws:latest
+    # Reads Kubernetes Secrets labelled `jenkins.io/credentials-type=...` and
+    # mirrors them into the Jenkins Credentials store automatically. This is
+    # how ESO-synced secrets (e.g. gitops-repo, minio-jenkins) become usable
+    # from pipelines without any manual Jenkins UI clicks. Rotating the value
+    # in 1Password is picked up by ESO within the refresh interval, then by
+    # this plugin on its next scan (default 5 min).
+    - kubernetes-credentials-provider:latest
   installLatestPlugins: true
   ingress:
     enabled: true
