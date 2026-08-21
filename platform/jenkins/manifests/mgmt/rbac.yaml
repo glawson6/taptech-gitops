@@ -1,0 +1,40 @@
+# Extra RBAC for the Jenkins controller ServiceAccount.
+#
+# The kubernetes-credentials-provider plugin (declared in values.yaml
+# installPlugins) reads Kubernetes Secrets carrying the label
+# `jenkins.io/credentials-type=...` from the controller's own namespace and
+# mirrors them into the Jenkins Credentials store.
+#
+# The default Jenkins RBAC (from the Helm chart) does NOT include watch/list
+# on Secrets -- only on ConfigMaps (for the JCasC reload sidecar). Without
+# these permissions the plugin silently reads zero secrets: no error, no log
+# noise, just an empty credential set. This Role restores the missing piece.
+#
+# Scope: single namespace. If Jenkins ever needs to read credential secrets
+# from other namespaces (e.g. jenkins-agents), promote this to a ClusterRole
+# + one RoleBinding per target namespace, and set
+# `KUBERNETES_JSON_SAFE_LOGGING=true` on the controller + kubernetes-credentials-provider
+# system property `com.cloudbees.jenkins.plugins.kubernetes_credentials_provider.KubernetesCredentialProvider.namespace=<csv>`.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: jenkins-secrets-reader
+  namespace: jenkins
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jenkins-secrets-reader
+  namespace: jenkins
+subjects:
+  - kind: ServiceAccount
+    name: jenkins
+    namespace: jenkins
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: jenkins-secrets-reader
