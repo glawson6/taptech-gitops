@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# includeSelectors=false is deliberate: spec.selector.matchLabels is IMMUTABLE
+# on a Deployment. Anything Kustomize injects into it can never be changed
+# without deleting the Deployment. The selector stays exactly what
+# deployment.yaml declares.
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/name: holdings-ui
+      app.kubernetes.io/part-of: taptech
+
+resources:
+  - serviceaccount.yaml
+  - deployment.yaml
+  - service.yaml
+
+# Overlays override the tag. Jenkins never edits this file.
+images:
+  - name: tooling.taptech.net:5000/taptech-holdings-ui
+    newTag: placeholder

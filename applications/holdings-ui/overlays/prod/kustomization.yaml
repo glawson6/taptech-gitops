@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: taptech-prod
+resources:
+  - ../../base
+  - ingress.yaml
+
+labels:
+  - includeSelectors: false
+    pairs:
+      taptech.net/env: prod
+
+replicas:
+  - name: holdings-ui
+    count: 1
+
+patches:
+  - path: patch-resources.yaml
+
+# ---- Jenkins writes this line ----
+#   kustomize edit set image tooling.taptech.net:5000/taptech-holdings-ui=tooling.taptech.net:5000/taptech-holdings-ui:<tag>
+# Keep it immutable (git sha or build number), never 'latest'.
+images:
+  - name: tooling.taptech.net:5000/taptech-holdings-ui
+    newTag: "0.0.0-bootstrap"

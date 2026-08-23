@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    # Restart this workload when a Secret or ConfigMap it references changes.
+    reloader.stakater.com/auto: "true"
+  name: holdings-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: holdings-ui
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: holdings-ui
+    spec:
+      serviceAccountName: holdings-ui
+      securityContext:
+        # nginx:alpine base image runs as uid 101 (nginx user).
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: tooling.taptech.net:5000/taptech-holdings-ui
+          imagePullPolicy: IfNotPresent
+          ports:
+            # nginx.conf inside the image `listen 80;`, matching the base
+            # nginx:alpine default. Container port must match or probes 404.
+            - name: http
+              containerPort: 80
+          # nginx-served React SPA -- no /actuator, health = GET /.
+          startupProbe:
+            httpGet: {path: /, port: http}
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:
+            httpGet: {path: /, port: http}
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /, port: http}
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits:   {memory: 512Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            # nginx needs writable /tmp, cache dir, and run dir; the container
+            # filesystem is read-only per the securityContext above.
+            - name: tmp
+              mountPath: /tmp
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /var/run
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-run
+          emptyDir: {}
