@@ -1,0 +1,27 @@
+# Sentinel Helm values -- shared defaults across clusters.
+#
+# The chart itself lives in the taptech-sentinel repo at deployment/helm.
+# Per-cluster overrides go in clusters/<name>.yaml and are merged second,
+# so anything they set wins.
+#
+# image.tag lives in the per-cluster file, not here: Jenkins tag-bumps
+# should touch exactly one file. The base image name matches the actual
+# publish target (tooling.taptech.net:5000/taptech/sentinel-operator),
+# not the chart's default of registry.taptech.net/sentinel-operator.
+
+replicaCount: 1
+
+image:
+  repository: tooling.taptech.net:5000/taptech/sentinel-operator
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: sentinel-operator
+
+# The runtime secret (Anthropic + Telegram credentials) is materialised by
+# the ExternalSecret in manifests/apps-prod/externalsecret-sentinel.yaml.
+# The chart's deployment template reads it as <release>-secrets, so the
+# release name in the Application spec MUST be `sentinel` -> secret name
+# `sentinel-secrets`. Rotation propagates via the reloader annotation
+# baked into the chart template.

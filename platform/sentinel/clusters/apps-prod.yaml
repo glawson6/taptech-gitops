@@ -1,0 +1,39 @@
+# Sentinel prod overrides for the apps-prod (MicroK8s) cluster.
+# Mirrors deployment/helm/values-prod.yaml from the sentinel repo,
+# plus the image tag pin so Jenkins can bump this file in place.
+
+sentinel:
+  mode: IN_CLUSTER
+  operatorNamespace: sentinel-system
+  autoBlockEnabled: true
+  nginx:
+    namespace: ingress
+    podSelector: "name=nginx-ingress-microk8s"
+    configMapName: nginx-load-balancer-microk8s-conf
+    configMapNamespace: ingress
+
+jaiclaw:
+  telegram:
+    enabled: true
+    # botToken is injected via the sentinel-secrets Secret (see
+    # manifests/apps-prod/externalsecret-sentinel.yaml); the chart's
+    # deployment template already wires it as secretKeyRef, so do not
+    # set botToken here.
+    #
+    # allowedUsers is a comma-separated list of Telegram user IDs used
+    # only for command authorization -- not a credential -- and the
+    # chart renders it as a plain env value (not secretKeyRef). Set it
+    # here (quoted; leading digits + commas break YAML auto-typing).
+    # Fill in the real IDs before first sync.
+    allowedUsers: ""
+    rateLimit: 10
+
+resources:
+  limits:   {cpu: "1",   memory: 2Gi}
+  requests: {cpu: 250m,  memory: 1Gi}
+
+# ---- Jenkins writes this line ----
+#   yq -i '.image.tag = "<tag>"' platform/sentinel/clusters/apps-prod.yaml
+# Keep it immutable (git sha or build number), never 'latest'.
+image:
+  tag: 0.1.0-SNAPSHOT

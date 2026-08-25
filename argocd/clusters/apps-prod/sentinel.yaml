@@ -1,0 +1,45 @@
+# TapTech Sentinel -- cluster-wide NGINX ingress security operator.
+#
+# Lives under `platform` (not `applications`) because it installs CRDs,
+# a ClusterRole, and a ClusterRoleBinding -- forbidden by the applications
+# AppProject. Release name is `sentinel` so the chart's <release>-secrets
+# lookup lines up with the ExternalSecret in manifests/apps-prod.
+#
+# selfHeal is deliberately off: the operator reconciles user-authored
+# IPBlockRule CRDs, and we never want Argo to prune or reset those.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apps-prod-sentinel
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: platform
+  destination:
+    name: apps-prod
+    namespace: sentinel-system
+  sources:
+    - repoURL: 'https://github.com/glawson6/taptech-sentinel.git'
+      targetRevision: main
+      path: deployment/helm
+      helm:
+        releaseName: sentinel
+        # Shared defaults first, per-cluster overrides second. Helm merges
+        # in order, so the cluster file wins on any key it sets.
+        valueFiles:
+          - $values/platform/sentinel/values.yaml
+          - $values/platform/sentinel/clusters/apps-prod.yaml
+    - repoURL: 'https://github.com/glawson6/taptech-gitops.git'
+      targetRevision: main
+      ref: values
+    - repoURL: 'https://github.com/glawson6/taptech-gitops.git'
+      targetRevision: main
+      path: platform/sentinel/manifests/apps-prod
+  syncPolicy:
+    automated: {prune: true, selfHeal: false}
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
