@@ -1,0 +1,50 @@
+# TapTech Keycloak -- identity provider for the CRM + agent stack.
+# Serves id.taptech.net; imports realms `platform` and `tenant-default`
+# on first boot; seeds super-admin + tenant-admin users via a post-install
+# Job. Uses a dedicated 2Gi Postgres (see platform/keycloak/manifests/
+# apps-prod/postgres.yaml) -- not shared with the wider CRM stack.
+#
+# Lives under `platform` (not `applications`) because it lands in the
+# `taptech` namespace alongside future stateful platform components,
+# and the AppProject is more permissive there. Release name is
+# `keycloak` so the chart's <release>-* resource naming is stable.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apps-prod-keycloak
+  namespace: argocd
+  annotations:
+    # After cert-manager (-5) but before workloads that federate to it.
+    argocd.argoproj.io/sync-wave: "-2"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: platform
+  destination:
+    name: apps-prod
+    namespace: taptech
+  sources:
+    - repoURL: 'https://github.com/glawson6/taptech-company.git'
+      targetRevision: main
+      path: deployment/helm/taptech-keycloak
+      helm:
+        releaseName: keycloak
+        # Shared defaults first, per-cluster overrides second. Helm
+        # merges in order, so the cluster file wins on any key it sets.
+        valueFiles:
+          - $values/platform/keycloak/values.yaml
+          - $values/platform/keycloak/clusters/apps-prod.yaml
+    - repoURL: 'https://github.com/glawson6/taptech-gitops.git'
+      targetRevision: main
+      ref: values
+    - repoURL: 'https://github.com/glawson6/taptech-gitops.git'
+      targetRevision: main
+      path: platform/keycloak/manifests/apps-prod
+  syncPolicy:
+    # selfHeal off: Keycloak persists admin passwords, seeded users, and
+    # realm config to Postgres, and operators may edit them via the
+    # admin console. Never let Argo revert those to chart defaults.
+    automated: {prune: true, selfHeal: false}
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

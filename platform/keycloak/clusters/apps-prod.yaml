@@ -1,0 +1,47 @@
+# Keycloak prod overrides for the apps-prod (MicroK8s) cluster.
+# Mirrors deployment/helm/taptech-keycloak/values-prod.yaml from the
+# taptech-company repo, adapted for this cluster's ingress-nginx setup.
+
+image:
+  # Pin by digest in prod. The build-keycloak-image.sh script prints
+  # the digest after pushing; copy it here.
+  digest: "sha256:d484f7e2c57c5e69ec65af75907ed86ecfa10810f0a2fa1e425f39d8265d4770"
+
+hostname: id.taptech.net
+
+ingress:
+  enabled: true
+  # apps-prod uses ingress-nginx (className `nginx`), not microk8s'
+  # bundled `public` class.
+  className: nginx
+  host: id.taptech.net
+  tls:
+    secretName: id-taptech-net-tls
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "8m"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload";
+
+# Admin ingress: OFF for the first landing. Reach /admin via
+# `kubectl port-forward svc/keycloak 8080:8080`. Populate
+# adminAllowedCidrs + set adminIngress.host to expose it later.
+adminAllowedCidrs: []
+
+networkPolicy:
+  enabled: true
+  # microk8s bundles ingress-nginx into the `ingress` namespace, not
+  # `ingress-nginx`. Pod label is `name: nginx-ingress-microk8s`.
+  ingressNginxNamespace: ingress
+  ingressNginxPodLabel:
+    key: name
+    value: nginx-ingress-microk8s
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: 2
+    memory: 2Gi

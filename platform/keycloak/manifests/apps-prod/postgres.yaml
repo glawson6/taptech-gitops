@@ -1,0 +1,108 @@
+# Dedicated Postgres for Keycloak. Not shared with the wider CRM
+# workloads (which use a separate taptech-postgres install sized for
+# that stack). Keycloak's schema fits comfortably in <500MB; 2Gi is
+# generous for years of audit events + sessions.
+#
+# Credentials come from the taptech-keycloak-db Secret (materialized by
+# the ExternalSecret in externalsecrets.yaml). Keycloak's chart reads
+# the same Secret via credentialsFromSecret, so both sides land on
+# identical creds.
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-postgres
+  namespace: taptech
+  labels:
+    app.kubernetes.io/name: keycloak-postgres
+    app.kubernetes.io/part-of: taptech-keycloak
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: postgres
+      protocol: TCP
+      name: postgres
+  selector:
+    app.kubernetes.io/name: keycloak-postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: keycloak-postgres
+  namespace: taptech
+  annotations:
+    reloader.stakater.com/auto: "true"
+  labels:
+    app.kubernetes.io/name: keycloak-postgres
+    app.kubernetes.io/part-of: taptech-keycloak
+spec:
+  serviceName: keycloak-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: keycloak-postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: keycloak-postgres
+        app.kubernetes.io/part-of: taptech-keycloak
+    spec:
+      securityContext:
+        # postgres image runs as uid 999; fsGroup makes the PVC writable.
+        fsGroup: 999
+        runAsNonRoot: true
+        runAsUser: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: keycloak
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: taptech-keycloak-db
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: taptech-keycloak-db
+                  key: password
+            # postgres puts its PGDATA under a subdir so the mount root
+            # can hold lost+found without confusing initdb.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits:   {cpu: 500m, memory: 512Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 2Gi

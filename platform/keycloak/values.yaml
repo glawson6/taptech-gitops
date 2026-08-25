@@ -1,0 +1,72 @@
+# Shared Helm defaults for the taptech-keycloak chart across clusters.
+#
+# The chart lives in the taptech-company repo at
+# deployment/helm/taptech-keycloak. Per-cluster overrides go in
+# clusters/<name>.yaml and are merged second, so anything they set wins.
+#
+# image.tag is pinned in clusters/apps-prod.yaml so Jenkins tag-bumps
+# touch exactly one file.
+#
+# Secrets model: this repo uses External Secrets Operator, NOT the
+# 1Password Kubernetes Operator. The chart's OnePasswordItem CR rendering
+# stays OFF (onePassword.enabled: false); the bootstrap-users Job is
+# gated on its own switch (bootstrapUsers.enabled: true). The Secrets
+# the Job + Deployment consume (taptech-keycloak-db, taptech-keycloak-
+# bootstrap, and the per-realm seed-user Secrets) are materialized by
+# ExternalSecret manifests under manifests/<cluster>/.
+
+# OnePasswordItem CR rendering: OFF. We use ExternalSecrets instead.
+onePassword:
+  enabled: false
+  # `items` map stays populated -- the bootstrap-users Job reads
+  # secretName / realm / username / roles from here to know which
+  # k8s Secrets to consume and which users to seed. The itemName
+  # field is unused when onePassword.enabled is false, but leave it
+  # set so anyone reading the chart understands the mapping.
+  items:
+    database:
+      enabled: true
+      itemName: KEYCLOAK_DB
+      secretName: taptech-keycloak-db
+    bootstrapAdmin:
+      enabled: true
+      itemName: KEYCLOAK_BOOTSTRAP_ADMIN
+      secretName: taptech-keycloak-bootstrap
+    platformSuperAdmin:
+      enabled: true
+      itemName: KEYCLOAK_PLATFORM_SUPERADMIN
+      secretName: taptech-keycloak-platform-superadmin
+      realm: platform
+      username: super-admin
+      roles:
+        - SUPER_ADMIN
+    tenantDefaultAdmin:
+      enabled: true
+      itemName: KEYCLOAK_TENANT_DEFAULT_ADMIN
+      secretName: taptech-keycloak-tenant-default-admin
+      realm: tenant-default
+      username: tenant-admin
+      roles:
+        - TENANT_ADMIN
+
+# Post-install/upgrade Job that seeds the two realm admins via kcadm.
+bootstrapUsers:
+  enabled: true
+
+database:
+  vendor: postgres
+  host: keycloak-postgres
+  port: 5432
+  database: keycloak
+  credentialsFromSecret:
+    enabled: true
+    secretName: taptech-keycloak-db
+    usernameKey: username
+    passwordKey: password
+
+admin:
+  credentialsFromSecret:
+    enabled: true
+    secretName: taptech-keycloak-bootstrap
+    usernameKey: username
+    passwordKey: password
