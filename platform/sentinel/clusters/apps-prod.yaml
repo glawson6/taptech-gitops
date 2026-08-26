@@ -16,6 +16,18 @@ sentinel:
     configMapNamespace: ingress-nginx
 
 jaiclaw:
+  # apps-prod uses a MiniMax proxy of the Anthropic API rather than
+  # Anthropic direct. anthropic-api-key comes from the secret, but the
+  # base URL and model name are plain values (not credentials -- they
+  # tell the client which endpoint / model to hit). Without these,
+  # sentinel sends the MiniMax key to api.anthropic.com and gets 401.
+  #
+  # Source values match the MiniMax-Anthropic-API item in the taptech-prod
+  # 1P vault (fields anthropic-base-url + anthropic-model). Not sourced
+  # via the ExternalSecret because the chart wires them as plain env
+  # values, not secretKeyRef.
+  anthropicBaseUrl: "https://api.minimax.io/anthropic"
+  anthropicModel: "MiniMax-M2.7"
   telegram:
     enabled: true
     # botToken is injected via the sentinel-secrets Secret (see
