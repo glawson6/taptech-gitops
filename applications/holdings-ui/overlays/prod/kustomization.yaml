@@ -23,4 +23,4 @@ patches:
 # Keep it immutable (git sha or build number), never 'latest'.
 images:
   - name: tooling.taptech.net:5000/taptech-holdings-ui
-    newTag: "0.0.0-bootstrap"
+    newTag: "1.0.1-listen8080-20260826-032638"

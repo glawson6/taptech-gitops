@@ -34,10 +34,11 @@ spec:
           image: tooling.taptech.net:5000/taptech-holdings-ui
           imagePullPolicy: IfNotPresent
           ports:
-            # nginx.conf inside the image `listen 80;`, matching the base
-            # nginx:alpine default. Container port must match or probes 404.
+            # nginx.conf inside the image `listen 8080;` so the container
+            # can run as non-root without CAP_NET_BIND_SERVICE. Container
+            # port must match or probes 404.
             - name: http
-              containerPort: 80
+              containerPort: 8080
           # nginx-served React SPA -- no /actuator, health = GET /.
           startupProbe:
             httpGet: {path: /, port: http}
