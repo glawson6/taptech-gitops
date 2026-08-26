@@ -47,6 +47,22 @@ resources:
   limits:   {cpu: "1",   memory: 2Gi}
   requests: {cpu: 250m,  memory: 1Gi}
 
+# SMTP2GO email backend for the daily threat report. apiKey lands via
+# the sentinel-secrets Secret (mapped in manifests/apps-prod/
+# externalsecret-sentinel.yaml from SMTP2GO_API/api-key in the
+# taptech-prod 1P vault). The other fields are plain config.
+smtp2go:
+  enabled: true
+  apiUrl: "https://api.smtp2go.com/v3/"
+  fromEmail: "noreply@taptech.net"
+  fromName: "TapTech Sentinel"
+
+# Daily threat report scheduling. schedule + timezone use chart defaults
+# (6am America/New_York); override here if that ever changes.
+report:
+  enabled: true
+  emails: "glawson6@gmail.com,gregory.lawson@taptech.net"
+
 # ---- Jenkins writes this line ----
 #   yq -i '.image.tag = "<tag>"' platform/sentinel/clusters/apps-prod.yaml
 # Keep it immutable (git sha or build number), never 'latest'.
