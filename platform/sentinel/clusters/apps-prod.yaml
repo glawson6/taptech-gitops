@@ -22,10 +22,10 @@ jaiclaw:
     #
     # allowedUsers is a comma-separated list of Telegram user IDs used
     # only for command authorization -- not a credential -- and the
-    # chart renders it as a plain env value (not secretKeyRef). Set it
-    # here (quoted; leading digits + commas break YAML auto-typing).
-    # Fill in the real IDs before first sync.
-    allowedUsers: ""
+    # chart renders it as a plain env value (not secretKeyRef). Quoted
+    # because leading digits + commas break YAML auto-typing (large IDs
+    # get parsed as scientific notation).
+    allowedUsers: "8781345712"
     rateLimit: 10
 
 resources:
