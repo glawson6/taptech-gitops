@@ -23,7 +23,12 @@ spec:
       protocol: TCP
       name: postgres
   selector:
-    app.kubernetes.io/name: keycloak-postgres
+    # Pod label MUST match what the chart's NetworkPolicy egress rule
+    # allows (hardcoded `app.kubernetes.io/name: taptech-postgres` in
+    # templates/networkpolicy.yaml). Service DNS name is unaffected --
+    # keycloak still connects to `keycloak-postgres:5432`.
+    app.kubernetes.io/name: taptech-postgres
+    taptech.net/component: keycloak-postgres
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -40,11 +45,18 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: keycloak-postgres
+      app.kubernetes.io/name: taptech-postgres
+      taptech.net/component: keycloak-postgres
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: keycloak-postgres
+        # Named `taptech-postgres` to satisfy the keycloak chart's
+        # NetworkPolicy egress rule (hardcoded label match). The
+        # taptech.net/component label disambiguates this from the
+        # shared taptech-postgres StS used by other apps -- there is
+        # no naming collision because they're in different namespaces.
+        app.kubernetes.io/name: taptech-postgres
+        taptech.net/component: keycloak-postgres
         app.kubernetes.io/part-of: taptech-keycloak
     spec:
       securityContext:
