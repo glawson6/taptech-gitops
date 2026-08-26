@@ -23,4 +23,4 @@ patches:
 images:
 - name: tooling.taptech.net:5000/jaiclaw-io
   newName: tooling.taptech.net:5000/jaiclaw-io
-  newTag: 1.0.0-SNAPSHOT-20260821-173429-800d172
+  newTag: 1.0.0-listen8080-20260826-030238
