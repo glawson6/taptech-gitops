@@ -20,6 +20,17 @@ spec:
       - http01:
           ingress:
             ingressClassName: nginx
+            # cert-manager creates a temporary Ingress per HTTP-01 challenge.
+            # ingress-nginx enables ssl-redirect automatically for any host
+            # with a TLS block, so LE's plain-HTTP request to
+            # /.well-known/acme-challenge/... gets a 308 -> https and the
+            # challenge fails. Injecting ssl-redirect: false onto the
+            # solver Ingress exempts just those paths from the redirect.
+            ingressTemplate:
+              metadata:
+                annotations:
+                  nginx.ingress.kubernetes.io/ssl-redirect: "false"
+                  nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
 ---
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
@@ -37,3 +48,14 @@ spec:
       - http01:
           ingress:
             ingressClassName: nginx
+            # cert-manager creates a temporary Ingress per HTTP-01 challenge.
+            # ingress-nginx enables ssl-redirect automatically for any host
+            # with a TLS block, so LE's plain-HTTP request to
+            # /.well-known/acme-challenge/... gets a 308 -> https and the
+            # challenge fails. Injecting ssl-redirect: false onto the
+            # solver Ingress exempts just those paths from the redirect.
+            ingressTemplate:
+              metadata:
+                annotations:
+                  nginx.ingress.kubernetes.io/ssl-redirect: "false"
+                  nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
