@@ -1,0 +1,44 @@
+# Apps-prod overrides for MinIO. Distinct instance from the mgmt-cluster
+# minio (which stores Jenkins artifacts/backups); this one serves the
+# apps-prod business workloads.
+#
+# The shared platform/minio/values.yaml pre-creates jenkins-artifacts,
+# jenkins-backups, and mgmt-general -- those are mgmt-cluster concerns.
+# Override the buckets list to empty here; per-app buckets will be added
+# as concrete workloads need them (sentinel reports, holdings uploads,
+# etc.). The community minio chart's buckets list is authoritative --
+# leaving it empty means no buckets get pre-created, which is what we
+# want for a fresh install.
+buckets: []
+
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  hosts:
+    - minio.taptech.net
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # MinIO's S3 API expects large uploads; unblock at the ingress.
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+  tls:
+    - hosts: [minio.taptech.net]
+      secretName: minio-tls
+
+consoleIngress:
+  enabled: true
+  ingressClassName: nginx
+  hosts:
+    - minio-console.taptech.net
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # Console (browser UI) is admin-facing -- allowlist to the ops
+    # workstation IP. The S3 API ingress above (minio.taptech.net) is
+    # intentionally NOT allowlisted so external CI/tools can push with
+    # valid credentials.
+    #
+    # TODO: this is a residential IP; migrate to a VPN egress CIDR when
+    # the VPN is in place.
+    nginx.ingress.kubernetes.io/whitelist-source-range: "104.14.172.65/32"
+  tls:
+    - hosts: [minio-console.taptech.net]
+      secretName: minio-console-tls

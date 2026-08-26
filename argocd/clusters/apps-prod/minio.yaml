@@ -1,0 +1,44 @@
+# TapTech MinIO on the apps-prod cluster -- S3-compatible object store
+# for business workloads (sentinel threat-report PDFs, holdings-ui form
+# uploads, etc.). Distinct from the mgmt-cluster minio (Jenkins
+# artifacts).
+#
+# selfHeal is OFF: buckets and bucket policies are operator-editable
+# runtime state. Argo must never revert a policy change or delete a
+# bucket that isn't in git.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apps-prod-minio
+  namespace: argocd
+  annotations:
+    # After ingress-nginx (-3) and cert-manager (-5); wave 1 matches the
+    # mgmt-minio Application for consistency across clusters.
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: platform
+  destination:
+    name: apps-prod
+    namespace: minio
+  sources:
+    - repoURL: 'https://charts.min.io'
+      chart: minio
+      targetRevision: 5.4.0   # VERIFY: helm search repo <repo>/minio --versions
+      helm:
+        releaseName: minio
+        valueFiles:
+          # Shared defaults first, per-cluster overrides second. Helm merges
+          # in order, so the cluster file wins on any key it sets.
+          - $values/platform/minio/values.yaml
+          - $values/platform/minio/clusters/apps-prod.yaml
+    - repoURL: 'https://github.com/glawson6/taptech-gitops.git'
+      targetRevision: main
+      ref: values
+    - repoURL: 'https://github.com/glawson6/taptech-gitops.git'
+      targetRevision: main
+      path: platform/minio/manifests/apps-prod
+  syncPolicy:
+    automated: {prune: true, selfHeal: false}
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]
