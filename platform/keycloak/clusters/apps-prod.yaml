@@ -21,8 +21,11 @@ ingress:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: "8m"
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload";
+    # Note: HSTS via configuration-snippet is disabled on this cluster's
+    # ingress-nginx (admission webhook rejects it). If HSTS is required,
+    # enable it via the ingress-nginx controller ConfigMap
+    # (hsts: "true", hsts-preload: "true", hsts-max-age, hsts-include-subdomains)
+    # or set Keycloak's KC_HTTP_RESPONSE_HEADERS env instead.
 
 # Admin ingress: OFF for the first landing. Reach /admin via
 # `kubectl port-forward svc/keycloak 8080:8080`. Populate
