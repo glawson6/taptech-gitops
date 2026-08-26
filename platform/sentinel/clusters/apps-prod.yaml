@@ -6,11 +6,14 @@ sentinel:
   mode: IN_CLUSTER
   operatorNamespace: sentinel-system
   autoBlockEnabled: true
+  # apps-prod runs the community ingress-nginx chart, not the
+  # microk8s bundled controller. Namespace, pod selector, and
+  # ConfigMap all differ from the chart's microk8s-shaped defaults.
   nginx:
-    namespace: ingress
-    podSelector: "name=nginx-ingress-microk8s"
-    configMapName: nginx-load-balancer-microk8s-conf
-    configMapNamespace: ingress
+    namespace: ingress-nginx
+    podSelector: "app.kubernetes.io/name=ingress-nginx"
+    configMapName: ingress-nginx-controller
+    configMapNamespace: ingress-nginx
 
 jaiclaw:
   telegram:

@@ -31,12 +31,13 @@ adminAllowedCidrs: []
 
 networkPolicy:
   enabled: true
-  # microk8s bundles ingress-nginx into the `ingress` namespace, not
-  # `ingress-nginx`. Pod label is `name: nginx-ingress-microk8s`.
-  ingressNginxNamespace: ingress
+  # apps-prod runs the community ingress-nginx chart. Namespace and
+  # pod label match that chart's defaults, not the microk8s bundled
+  # controller.
+  ingressNginxNamespace: ingress-nginx
   ingressNginxPodLabel:
-    key: name
-    value: nginx-ingress-microk8s
+    key: app.kubernetes.io/name
+    value: ingress-nginx
 
 resources:
   requests:
