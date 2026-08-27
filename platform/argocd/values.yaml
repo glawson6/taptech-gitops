@@ -12,6 +12,27 @@ configs:
     # Kustomize needs this if a service ever inflates a Helm chart.
     kustomize.buildOptions: --enable-helm
     timeout.reconciliation: 180s
+    # Non-human accounts for programmatic API access. `apiKey` enables
+    # `argocd account generate-token`; token is stored in 1Password
+    # (vault taptech-prod, item TapTech-GitOps-Agent-Argocd) and consumed
+    # by the taptech-gitops-agent app on apps-prod.
+    accounts.taptech-gitops-agent: apiKey
+  rbac:
+    # Middle-ground RBAC for the gitops agent: read everywhere, sync the
+    # `applications` project, explicit delete=deny as a safety net. The
+    # agent's own confirmation-gate layer is the primary guard; this is
+    # the belt to that suspenders.
+    policy.csv: |
+      p, role:taptech-gitops-agent, applications, get,      */*,             allow
+      p, role:taptech-gitops-agent, applications, sync,     applications/*,  allow
+      p, role:taptech-gitops-agent, applications, action/*, applications/*,  allow
+      p, role:taptech-gitops-agent, applications, delete,   */*,             deny
+      p, role:taptech-gitops-agent, projects,     get,      *,               allow
+      p, role:taptech-gitops-agent, repositories, get,      *,               allow
+      p, role:taptech-gitops-agent, clusters,     get,      *,               allow
+      g, taptech-gitops-agent, role:taptech-gitops-agent
+    policy.default: ''
+    scopes: '[groups]'
     # Cosmetic drift suppression for ESO. ExternalSecrets end up with two
     # kinds of drift after apply:
     #   1. `.status` mutates every reconcile (refreshTime, syncedResourceVersion)
