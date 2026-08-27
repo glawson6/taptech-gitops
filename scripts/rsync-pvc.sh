@@ -28,14 +28,16 @@ DEST_IP="${4:?usage}"
 shift 4 || true
 
 DRY_RUN=0
+ALLOW_SRC_ZERO=0
 SRC_SSH_USER="tap"
 DEST_SSH_USER="tap"
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --dry-run)      DRY_RUN=1; shift ;;
-    --src-user)     SRC_SSH_USER="$2";  shift 2 ;;
-    --dest-user)    DEST_SSH_USER="$2"; shift 2 ;;
+    --dry-run)         DRY_RUN=1; shift ;;
+    --allow-src-zero)  ALLOW_SRC_ZERO=1; shift ;;
+    --src-user)        SRC_SSH_USER="$2";  shift 2 ;;
+    --dest-user)       DEST_SSH_USER="$2"; shift 2 ;;
     *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
 done
@@ -102,9 +104,19 @@ say "pod runAsUser: ${POD_UID}, fsGroup: ${POD_GID}"
 # --- Scale src to 0 (destructive; needs confirmation unless --dry-run) --
 CURRENT_REPLICAS=$(kubectl --context "$SRC_CTX" -n "$SRC_NS" get "$KIND" "$WORKLOAD" \
   -o jsonpath='{.spec.replicas}')
-[ "$CURRENT_REPLICAS" = "0" ] && die "src ${KIND}/${WORKLOAD} already at replicas=0 (someone else migrating?)"
+if [ "$CURRENT_REPLICAS" = "0" ]; then
+  if [ "$ALLOW_SRC_ZERO" -eq 1 ]; then
+    warn "src ${KIND}/${WORKLOAD} already at replicas=0 (--allow-src-zero); skipping scale-down"
+    CURRENT_REPLICAS=1
+    SKIP_SCALE=1
+  else
+    die "src ${KIND}/${WORKLOAD} already at replicas=0. Pass --allow-src-zero to proceed if this is a replay."
+  fi
+else
+  SKIP_SCALE=0
+fi
 
-if [ "$DRY_RUN" -eq 0 ]; then
+if [ "$DRY_RUN" -eq 0 ] && [ "$SKIP_SCALE" -eq 0 ]; then
   echo
   warn "About to scale SRC ${SRC_CTX}/${SRC_NS}/${KIND}/${WORKLOAD} from ${CURRENT_REPLICAS} to 0."
   warn "This makes the workload UNAVAILABLE on src until you scale it back up."

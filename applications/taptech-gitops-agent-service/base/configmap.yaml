@@ -1,0 +1,28 @@
+# Non-secret runtime env for the gitops agent. Anything sensitive
+# (API tokens, bot tokens) lives in the ExternalSecret alongside.
+#
+# Rotation: the Deployment carries `reloader.stakater.com/auto: "true"`,
+# so edits here trigger a Pod restart automatically.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: taptech-gitops-agent-config
+data:
+  ANTHROPIC_MODEL: "claude-sonnet-4-20250514"
+  ARGOCD_SERVER: "https://argocd.taptech.net"
+  JENKINS_URL: "https://jenkins.taptech.net"
+  GITOPS_REPO_URL: "https://github.com/glawson6/taptech-gitops.git"
+  GITOPS_BRANCH: "main"
+  GITOPS_COMMIT_AUTHOR: "GitOps Agent <gitops-agent@taptech.net>"
+  # Points at the emptyDir workspace declared in the Deployment.
+  GITOPS_WORKSPACE: "/workspace/repo"
+  # 'env' provider reads directly from container env; the alternative
+  # is 'op' (1Password CLI) which needs the op binary + service token
+  # baked into the image. Env is fine here because ESO already resolves
+  # 1Password refs at Secret-materialization time.
+  GITOPS_CREDENTIAL_PROVIDER: "env"
+  SERVER_PORT: "8091"
+  TELEGRAM_ENABLED: "true"
+  # Poll instead of webhook: no public endpoint on apps-prod yet.
+  TELEGRAM_POLL_TIMEOUT: "30"
+  LOG_LEVEL: "INFO"

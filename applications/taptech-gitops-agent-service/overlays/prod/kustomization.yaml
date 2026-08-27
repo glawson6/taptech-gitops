@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: taptech-prod
+
+resources:
+  - ../../base
+
+labels:
+  - pairs:
+      taptech.net/env: prod
+
+replicas:
+  - count: 1
+    name: taptech-gitops-agent-service
+
+# ---- Jenkins writes this line ----
+#   kustomize edit set image tooling.taptech.net:5000/taptech-gitops-agent-service=tooling.taptech.net:5000/taptech-gitops-agent-service:<tag>
+# Keep it immutable (git sha or build number), never 'latest'.
+images:
+  - name: tooling.taptech.net:5000/taptech-gitops-agent-service
+    newName: tooling.taptech.net:5000/taptech-gitops-agent-service
+    newTag: placeholder

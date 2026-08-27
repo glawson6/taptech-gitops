@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    # Restart on Secret/ConfigMap change (rotation from 1Password propagates
+    # without a manual bounce).
+    reloader.stakater.com/auto: "true"
+  name: taptech-gitops-agent-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: taptech-gitops-agent-service
+  # Confirmation-gated state (workspace/repo, tmp) is per-Pod. RollingUpdate
+  # is OK because both replicas would re-clone on startup, but we keep
+  # maxSurge:1 / maxUnavailable:0 to avoid two Pods racing on the same
+  # gitops-repo push credentials during a rollout.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: taptech-gitops-agent-service
+    spec:
+      serviceAccountName: taptech-gitops-agent-service
+      securityContext:
+        # eclipse-temurin:21-jre default user; the runtime bins we install
+        # (kubectl, helm, kustomize, argocd, git) all work fine unprivileged.
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: tooling.taptech.net:5000/taptech-gitops-agent-service
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8091
+          envFrom:
+            - configMapRef:
+                name: taptech-gitops-agent-config
+            - secretRef:
+                name: taptech-gitops-agent-secrets
+          startupProbe:
+            httpGet: {path: /actuator/health, port: http}
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:
+            httpGet: {path: /actuator/health, port: http}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /actuator/health, port: http}
+            periodSeconds: 30
+          resources:
+            requests: {cpu: 200m, memory: 512Mi}
+            limits:   {memory: 1Gi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: workspace
+              mountPath: /workspace
+            - name: home
+              mountPath: /home/nonroot
+      volumes:
+        # ephemeral: the gitops repo re-clones on startup and every tool call
+        # via GitOpsRepoWorkspace.ensureUpToDate().
+        - name: tmp
+          emptyDir: {}
+        - name: workspace
+          emptyDir:
+            sizeLimit: 500Mi
+        - name: home
+          emptyDir: {}
