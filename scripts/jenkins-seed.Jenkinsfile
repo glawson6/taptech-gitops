@@ -23,10 +23,12 @@ pipeline {
     }
   }
   options {
+    // NOTE: `timestamps()` is a wrapper step (Timestamper plugin), not a
+    // Declarative option — omit here to keep the seed compiling on stock
+    // Jenkins installs. If wanted, wrap stage steps with `timestamps { ... }`.
     buildDiscarder(logRotator(daysToKeepStr: '30', numToKeepStr: '20'))
     timeout(time: 5, unit: 'MINUTES')
     disableConcurrentBuilds()
-    timestamps()
   }
   stages {
     stage('Process JobDSL scripts') {
