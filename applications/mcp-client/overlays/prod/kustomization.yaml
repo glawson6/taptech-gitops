@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: taptech-prod
+
+resources:
+  - ../../base
+  - ingress.yaml
+
+labels:
+  - pairs:
+      taptech.net/env: prod
+
+replicas:
+  - count: 1
+    name: mcp-client
+
+patches:
+  - path: patch-resources.yaml
+
+# ---- Jenkins writes this line ----
+#   kustomize edit set image tooling.taptech.net:5000/taptech-ai-agent-mcp-client=tooling.taptech.net:5000/taptech-ai-agent-mcp-client:<tag>
+# Keep it immutable (git sha or build number), never 'latest'.
+images:
+  - name: tooling.taptech.net:5000/taptech-ai-agent-mcp-client
+    newName: tooling.taptech.net:5000/taptech-ai-agent-mcp-client
+    newTag: placeholder

@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    # Restart on Secret/ConfigMap change (rotation from 1Password propagates
+    # without a manual bounce).
+    reloader.stakater.com/auto: "true"
+  name: taptech-crm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: taptech-crm
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: taptech-crm
+    spec:
+      serviceAccountName: taptech-crm
+      securityContext:
+        # eclipse-temurin:21-jre default user.
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: tooling.taptech.net:5000/taptech-platform-app
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: taptech-crm-config
+            - secretRef:
+                name: taptech-crm-secrets
+          env:
+            # Bridge the uniquely-named TAPTECH_CRM_REDIS_PASSWORD from the
+            # ExternalSecret into Spring's expected spring.data.redis.password.
+            # Keeping the 1Password field distinct per service lets each rotate
+            # independently; Spring only knows the standard key.
+            - name: SPRING_DATA_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: taptech-crm-secrets
+                  key: TAPTECH_CRM_REDIS_PASSWORD
+          startupProbe:
+            httpGet: {path: /actuator/health, port: http}
+            # Spring Boot 4 cold start on this app is ~80s; give it 3 minutes.
+            failureThreshold: 36
+            periodSeconds: 5
+          readinessProbe:
+            httpGet: {path: /actuator/health, port: http}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /actuator/health, port: http}
+            periodSeconds: 30
+          resources:
+            requests: {cpu: 200m, memory: 512Mi}
+            limits:   {memory: 1Gi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 200Mi

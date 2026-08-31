@@ -119,6 +119,32 @@ has no `automated` block, deliberately. If you would rather the review happen
 before the commit lands, have the pipeline open a pull request instead; that is
 the stronger gate, since it puts a one-line diff in front of a reviewer.
 
+## Provisioning pipeline jobs (JobDSL seed)
+
+Deploy pipelines are declared as JobDSL groovy files under
+`platform/jenkins/jobs/`. One seed job (`seed-jobs`) reads them and
+creates/updates the downstream Jenkins jobs. **The seed job itself is
+provisioned via the Jenkins REST API — nothing is clicked in the UI.**
+
+Bootstrap (one time per Jenkins install):
+
+```
+scripts/jenkins-bootstrap-seed.sh
+# reads op://taptech-mgmt/jenkins-ai-agent/password
+# POST /createItem?name=seed-jobs   →   HTTP 200 (or 400 already-exists → PUT config.xml)
+# POST /job/seed-jobs/build         →   materializes downstream jobs
+```
+
+After that, every deploy pipeline change is a git commit:
+- **New service?** Drop `platform/jenkins/jobs/<name>.groovy` and push. The
+  seed job's next SCM poll (every 5 min) creates the pipeline.
+- **Change a pipeline?** Edit its `.groovy`. Same 5-minute cycle.
+- **Change the actual build steps?** Edit `Jenkinsfile.deploy` in the
+  service's SOURCE repo. Its own SCM trigger picks it up.
+
+See `scripts/jenkins-bootstrap-seed.sh` for the API calls and
+`scripts/jenkins-seed.Jenkinsfile` for what the seed job runs.
+
 ## Why not Argo CD Image Updater
 
 It watches the registry and writes tags back itself, removing the commit step.

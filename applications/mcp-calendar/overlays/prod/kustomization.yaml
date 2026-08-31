@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: taptech-prod
+
+# No ingress: mcp-calendar is only reached from mcp-client over the ClusterIP
+# service at http://mcp-calendar.taptech-prod.svc.cluster.local/sse.
+resources:
+  - ../../base
+
+labels:
+  - pairs:
+      taptech.net/env: prod
+
+replicas:
+  - count: 1
+    name: mcp-calendar
+
+patches:
+  - path: patch-resources.yaml
+
+# ---- Jenkins writes this line ----
+#   kustomize edit set image tooling.taptech.net:5000/taptech-ai-agent-mcp-calendar-server=tooling.taptech.net:5000/taptech-ai-agent-mcp-calendar-server:<tag>
+# Keep it immutable (git sha or build number), never 'latest'.
+images:
+  - name: tooling.taptech.net:5000/taptech-ai-agent-mcp-calendar-server
+    newName: tooling.taptech.net:5000/taptech-ai-agent-mcp-calendar-server
+    newTag: placeholder

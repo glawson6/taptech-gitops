@@ -1,0 +1,43 @@
+# Non-secret runtime env for the mcp-client chat backend. Sensitive values
+# (Anthropic key, Redis password) live in the ExternalSecret alongside.
+#
+# Rotation: the Deployment carries `reloader.stakater.com/auto: "true"`,
+# so edits here trigger a Pod restart automatically.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mcp-client-config
+data:
+  SPRING_PROFILES_ACTIVE: "prod"
+  LOG_LEVEL: "INFO"
+  TZ: "UTC"
+
+  # LLM: MiniMax via its Anthropic-compatible endpoint (see application.yml).
+  ANTHROPIC_BASE_URL: "https://api.minimax.io/anthropic"
+  ANTHROPIC_MODEL: "MiniMax-M2.7"
+
+  # Session + memory store. Redis DB 0 is dedicated to mcp-client to avoid
+  # keyspace collisions with mcp-calendar (DB 1) and taptech-crm (DB 2).
+  REDIS_HOST: "redis-master.taptech-prod.svc.cluster.local"
+  REDIS_PORT: "6379"
+  # Spring binds spring.data.redis.database from SPRING_DATA_REDIS_DATABASE.
+  SPRING_DATA_REDIS_DATABASE: "0"
+
+  # Holdings tenant's calendar tools go through mcp-calendar in-cluster over
+  # SSE. See applications/mcp-calendar for the backing service.
+  CALENDAR_SERVER_URL: "http://mcp-calendar.taptech-prod.svc.cluster.local/sse"
+
+  # Chat tenancy: the SPA sends X-Chat-Tenant: taptech-holdings.
+  MCP_CLIENT_TENANT_HEADER_NAME: "X-Chat-Tenant"
+  CHAT_READ_TIMEOUT: "120"
+
+  # Object storage disabled on first cut; flip on after the MinIO bucket
+  # 'mcp-client-documents' is provisioned.
+  STORAGE_ENABLED: "false"
+
+  # Bot protection: keep the scanner tarpit on (empty UA / known-bad paths),
+  # leave rate-limit + IP filter off until we have baseline traffic to size
+  # the limits against.
+  SCANNER_ENABLED: "true"
+  RATELIMIT_ENABLED: "false"
+  IPFILTER_ENABLED: "false"

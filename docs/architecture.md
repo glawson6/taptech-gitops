@@ -226,8 +226,10 @@ place. That's created by hand once per cluster during
 
 ## Related docs
 
-- **`docs/mgmt-ui-inventory.md`** — every Application in table form
-  with URLs + auth model.
+- **`docs/mgmt-ui-inventory.md`** — every mgmt-cluster Application
+  in table form with URLs + auth model.
+- **`docs/deployed-apps-inventory.md`** — every workload under
+  `applications/` in table form: purpose, source repo, image, hostname.
 - **`docs/adding-a-mgmt-app.md`** — runbook for adding a new
   platform component; worked example adds a jaiclaw agent.
 - **`docs/ingress-and-tls.md`** — DNS records + Let's Encrypt.

@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    # Restart on Secret/ConfigMap change (rotation from 1Password propagates
+    # without a manual bounce).
+    reloader.stakater.com/auto: "true"
+  name: mcp-calendar
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mcp-calendar
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mcp-calendar
+    spec:
+      serviceAccountName: mcp-calendar
+      securityContext:
+        # eclipse-temurin:21-jre default user.
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: tooling.taptech.net:5000/taptech-ai-agent-mcp-calendar-server
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8283
+          envFrom:
+            - configMapRef:
+                name: mcp-calendar-config
+            - secretRef:
+                name: mcp-calendar-secrets
+          env:
+            # Bridge the uniquely-named CALENDAR_SERVER_REDIS_PASSWORD from
+            # the ExternalSecret into Spring's expected spring.data.redis.password.
+            # Keeping the 1Password field distinct per service lets each rotate
+            # independently; Spring only knows the standard key.
+            - name: SPRING_DATA_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mcp-calendar-secrets
+                  key: CALENDAR_SERVER_REDIS_PASSWORD
+          startupProbe:
+            httpGet: {path: /actuator/health, port: http}
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:
+            httpGet: {path: /actuator/health, port: http}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /actuator/health, port: http}
+            periodSeconds: 30
+          resources:
+            requests: {cpu: 100m, memory: 512Mi}
+            limits:   {memory: 1Gi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 100Mi

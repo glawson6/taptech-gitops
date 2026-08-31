@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-calendar
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: mcp-calendar
+  ports:
+    - name: http
+      port: 80
+      # Matches server.port: ${PORT:8283} in application.yml.
+      targetPort: http

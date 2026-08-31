@@ -1,0 +1,55 @@
+# Non-secret runtime env for the CRM lead-intake service. Sensitive values
+# (Redis password, and later SMTP2GO / Keycloak / captcha secret) live in
+# the ExternalSecret alongside.
+#
+# Rotation: the Deployment carries `reloader.stakater.com/auto: "true"`,
+# so edits here trigger a Pod restart automatically.
+#
+# Day-1 scope: contact-form intake only. Keycloak, Postgres projection,
+# SMTP2GO notifications, and calendar sync are OFF and turned on per phase.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: taptech-crm-config
+data:
+  SPRING_PROFILES_ACTIVE: "prod"
+
+  # Redis is source of record (leads, submission tokens, rate-limit counters,
+  # calendar events when enabled). DB 2 keeps CRM keyspace separate from
+  # mcp-client (0) and mcp-calendar (1).
+  REDIS_HOST: "redis-master.taptech-prod.svc.cluster.local"
+  REDIS_PORT: "6379"
+  SPRING_DATA_REDIS_DATABASE: "2"
+
+  # Tenancy — accept a default tenant so the SPAs don't have to send
+  # X-Tenant-Id yet. Header remains allowed for future multi-tenant use.
+  TAPTECH_TENANCY_ALLOW_DEFAULT: "true"
+  TAPTECH_TENANCY_RESOLVER_ALLOW_HEADER: "true"
+
+  # Bot mitigation stack. All four layers on:
+  #   honeypot + captcha (kaptcha PNG) + submission token + rate-limit.
+  TAPTECH_CRM_PROTECT_ENABLED: "true"
+  TAPTECH_CRM_PROTECT_HONEYPOT_ENABLED: "true"
+  TAPTECH_CRM_PROTECT_CAPTCHA_ENABLED: "true"
+  TAPTECH_CRM_PROTECT_CAPTCHA_PROVIDER: "kaptcha"
+  TAPTECH_CRM_PROTECT_RATE_LIMIT_ENABLED: "true"
+  TAPTECH_CRM_PROTECT_RATE_LIMIT_PER_MIN: "5"
+  TAPTECH_CRM_PROTECT_RATE_LIMIT_PER_HOUR: "30"
+  TAPTECH_CRM_PROTECT_SUBMISSION_TOKEN_ENABLED: "true"
+  TAPTECH_CRM_PROTECT_SUBMISSION_TOKEN_BACKEND: "redis"
+  TAPTECH_CRM_PROTECT_SUBMISSION_TOKEN_TTL_SECONDS: "600"
+
+  # CORS + origin allowlist — both sites POST cross-origin.
+  TAPTECH_CRM_PROTECT_CORS_ALLOWED_ORIGINS: "https://holdings.taptech.net,https://jaiclaw.io,https://www.jaiclaw.io"
+  TAPTECH_CRM_PROTECT_ORIGIN_ENABLED: "true"
+  TAPTECH_CRM_PROTECT_ORIGIN_REQUIRE_ON_WRITE: "true"
+  TAPTECH_CRM_PROTECT_ORIGIN_EXTRA_ORIGINS: "https://holdings.taptech.net,https://jaiclaw.io,https://www.jaiclaw.io"
+
+  # Day-1: no admin HTTP Basic, no Keycloak realm provisioning, no calendar.
+  TAPTECH_CRM_SECURITY_ADMIN_ENABLED: "false"
+  TAPTECH_KEYCLOAK_PROVISIONER_ENABLED: "false"
+  JAICLAW_CALENDAR_ENABLED: "false"
+  TAPTECH_AUDIT_STORE: "redis"
+
+  # Suppress R2DBC / Flyway autoconfig — no Postgres on day 1.
+  SPRING_AUTOCONFIGURE_EXCLUDE: "org.springframework.boot.r2dbc.autoconfigure.R2dbcAutoConfiguration,org.springframework.boot.r2dbc.autoconfigure.R2dbcTransactionManagerAutoConfiguration,org.springframework.boot.data.r2dbc.autoconfigure.DataR2dbcAutoConfiguration,org.springframework.boot.data.r2dbc.autoconfigure.DataR2dbcRepositoriesAutoConfiguration,org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration"

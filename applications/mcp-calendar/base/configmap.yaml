@@ -1,0 +1,35 @@
+# Non-secret runtime env for mcp-calendar (MCP-over-SSE calendar server).
+# Sensitive values live in the ExternalSecret alongside.
+#
+# Rotation: the Deployment carries `reloader.stakater.com/auto: "true"`,
+# so edits here trigger a Pod restart automatically.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mcp-calendar-config
+data:
+  SPRING_PROFILES_ACTIVE: "prod"
+  LOG_LEVEL: "INFO"
+  TZ: "UTC"
+
+  # Matches the containerPort in deployment.yaml; server.port reads $PORT.
+  PORT: "8283"
+
+  # Calendar provider: 'redis' persists events so restarts don't lose state.
+  CALENDAR_PROVIDER: "redis"
+  DEFAULT_TENANT_ID: "taptech-holdings"
+  REDIS_INIT_TENANTS: "taptech-holdings"
+  REDIS_DEFAULT_CALENDAR_NAME: "default"
+  MINIMUM_EVENT_DURATION_MINUTES: "30"
+
+  # HARD off: the jaiclaw calendar provider calls FLUSHDB when this is
+  # 'true', which would wipe every tenant's events on every Pod restart.
+  # Only flip 'true' for a controlled reset, never in prod defaults.
+  REDIS_REFRESH_ON_STARTUP: "false"
+
+  # Redis DB 1 keeps calendar keyspace separate from mcp-client (0) and
+  # taptech-crm (2). All three share the same Redis instance.
+  REDIS_HOST: "redis-master.taptech-prod.svc.cluster.local"
+  REDIS_PORT: "6379"
+  REDIS_DATABASE: "1"
+  REDIS_SSL_ENABLED: "false"
