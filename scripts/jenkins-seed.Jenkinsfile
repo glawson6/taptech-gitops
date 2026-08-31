@@ -37,7 +37,11 @@ pipeline {
           targets: 'platform/jenkins/jobs/*.groovy',
           removedJobAction: 'IGNORE',
           removedViewAction: 'IGNORE',
-          lookupStrategy: 'JENKINS_ROOT'
+          lookupStrategy: 'JENKINS_ROOT',
+          // Runs the DSL inside the Groovy sandbox so no manual
+          // /scriptApproval click is needed. The DSL we use here
+          // (pipelineJob + cpsScm + git) is all sandbox-safe.
+          sandbox: true
         )
       }
     }
