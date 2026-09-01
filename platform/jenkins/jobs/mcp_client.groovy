@@ -30,7 +30,7 @@ pipelineJob('mcp-client-deploy') {
       scm {
         git {
           remote {
-            url('https://github.com/glawson6/taptech-ai-agent-parent.git')
+            url('https://github.com/glawson6/taptech-chatbot-parent.git')
             credentials('gitops-repo')
           }
           branch('*/main')
